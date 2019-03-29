@@ -6,7 +6,6 @@ import Dash from '@/components/Dash';
 import Payment from '@/components/Payment';
 import Beneficiary from '@/components/Beneficiary';
 import Transaction from '@/components/Transaction';
-import Developer from '@/components/Developer';
 import Verify from '@/components/Verify';
 import FundAccount from '@/components/FundAccount';
 import MultiFactorAuth from '@/components/mfa';

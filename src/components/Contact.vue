@@ -6,7 +6,7 @@
       </router-link>
       <v-spacer></v-spacer>
       <v-toolbar-items class="hidden-sm-and-down white--text">
-        <v-btn flat :to="{name: 'SignIn'}" style="color: #534A93;">Sign In</v-btn>
+        <!-- <v-btn flat :to="{name: 'SignIn'}" style="color: #534A93;">Sign In</v-btn> -->
       </v-toolbar-items>
     </v-toolbar>
     <v-content>
@@ -49,7 +49,7 @@
               </v-card-text>
               <v-card-actions>
                 <v-spacer></v-spacer>
-                <v-btn color="primary" dark :disabled=disableSignup v-on:click="submitForm">Submit</v-btn>
+                <!-- <v-btn color="primary" dark :disabled=disableSignup v-on:click="submitForm">Submit</v-btn> -->
               </v-card-actions>
             </v-card>
           </v-flex>
