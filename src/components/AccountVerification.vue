@@ -906,8 +906,8 @@
 </template>
 
 <script>
-import * as decode from "jwt-decode";
-import axios from "axios";
+import * as rf from "../utils/sdk.js";
+import * as local from "../utils/localStorage.js";
 import * as countries from "../lib/countries";
 
 export default {
@@ -955,39 +955,24 @@ export default {
   created() {},
 
   methods: {
-    decodeToken() {
-      return decode(localStorage.token);
-    },
-
-    setHeaders() {
-      let token = localStorage.token;
-      return { headers: { token: token } };
-    },
-
     submitForm() {
       var body = { KYC: this.client };
-      var userId = this.decodeToken().userId;
-      var self = this;
-
-      axios
-        .post(`${process.env.API_URL}/users/${userId}/verify`, body, this.setHeaders())
-        .then(function(response) {
-          self.success = true;
-          self.clickedSubmit = true;
-          self.$root.$emit("verification-submitted");
-          localStorage.submitted = true;
-          setTimeout(
-            function() {
-              self.$router.push(`/rf/dashboard`);
-            }.bind(self),
-            5000
-          );
-
+      rf
+        .sendVerification(body)
+        .then(res => {
+          this.success = true;
+          this.clickedSubmit = true;
+          this.$root.$emit("verification-submitted");
+          //store submitted for...?
+          local.setLocal("submitted", true);
+          setTimeout(() => {
+            this.$router.push(`/`);
+          }, 5000);
           return;
         })
-        .catch(function(error) {
-          console.log("error", error);
-          self.error = true;
+        .catch(err => {
+          console.log(error);
+          this.error = true;
         });
     },
 
