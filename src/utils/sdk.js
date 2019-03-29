@@ -6,9 +6,9 @@ import rf from 'routefusion-sdk'
 // signin -> developer -> create key
 
 var sdk = rf.Instance({
-  RF_CLIENT_ID: process.env.RF_CLIENT_ID,
-  RF_SECRET: process.env.RF_SECRET,
-  RF_BASE_URL: process.env.RF_BASE_URL
+  RF_CLIENT_ID: "5557D9D66D510F290344DCFFA45CEC83E62CA13ED7FE3CD7DBA772031EC1005F",
+  RF_SECRET: "8D4dc85C40FbDe4C17A62793748bb3DDE1D64a0DF0bD532CD33E070Be7eD8856",
+  RF_BASE_URL: "https://sandbox.api.routefusion.co"
 });
 
 /**********USER*************/

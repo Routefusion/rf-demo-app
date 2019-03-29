@@ -40,8 +40,8 @@
 </template>
 
 <script>
-import * as decode from "jwt-decode";
-import axios from "axios";
+import * as rf from "../utils/sdk.js";
+import * as local from "../utils/localStorage.js";
 
 export default {
   data: () => ({
@@ -52,17 +52,25 @@ export default {
       {
         title: "Account Settings",
         path: "AccountSettings"
-      },
-      {
-        title: "Sign Out",
-        path: "Sign Out"
       }
     ]
   }),
 
   created() {
-    var tokenData = decode(localStorage.token);
-    this.getRoutes(tokenData);
+    //Check if stored and call and store if not
+    var user = local.getLocal("user");
+    if (user.verify) {
+      this.getRoutes(user);
+    } else
+      rf
+        .getUser()
+        .then(res => {
+          local.setLocal("user", res);
+          this.getRoutes(res);
+        })
+        .catch(err => err);
+
+    //Need to change this probably / maybe
     localStorage.avatarSrc === "undefined" || localStorage.avatarSrc === "null" ? (this.avatarSrc = null) : (this.avatarSrc = localStorage.avatarSrc);
   },
 
@@ -76,62 +84,40 @@ export default {
   },
 
   methods: {
-    setHeaders() {
-      let token = localStorage.token;
-      return { headers: { token: token } };
-    },
-
-    getRoutes(tokenData) {
-      var tokenData = tokenData || {};
-
+    getRoutes(user) {
       let routes = [
         {
           title: "Verify Account",
-          path: "/rf/verification",
+          path: "/verification",
           icon: "verified_user"
         },
         {
           title: "Home",
-          path: "/rf/dashboard",
+          path: "/dashboard",
           icon: "home"
         },
         {
           title: "Send Money",
-          path: "/rf/payments",
+          path: "/payments",
           icon: "attach_money"
         },
         {
           title: "Beneficiaries",
-          path: "/rf/beneficiaries",
+          path: "/beneficiaries",
           icon: "group"
         },
         {
           title: "Transactions",
-          path: "/rf/transactions",
+          path: "/transactions",
           icon: "receipt"
-        },
-
-        // {
-        //   title: 'Fund Account',
-        //   path: '/rf/fund_account',
-        //   icon: 'account_balance'
-        // },
-        {
-          title: "Developer",
-          path: "/rf/developer",
-          icon: "code"
         }
       ];
 
-      if (tokenData.verificationSubmitted || localStorage.submitted) {
+      //if verfication submitted, remove verfiy tab
+      if (user.verificationSubmitted) {
         routes.shift();
       }
-
       return (this.routes = routes);
-    },
-
-    removeVerificationFromNav() {
-      this.routes.shift();
     }
   }
 };
