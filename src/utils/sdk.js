@@ -32,7 +32,7 @@ export const getUsers = () => sdk.getUsers().then(res => res).catch(err => err)
 
 export const getBen = (ben_id) => ben_id ?
   sdk.getBeneficiary(ben_id).then(res => res).catch(err => err) :
-  sdk.getBenefiaries().then(res => res).catch(err => err)
+  sdk.getBeneficiaries().then(res => res).catch(err => err)
 
 export const createBen = (body) => sdk.createBenefiary(body).then(res => res).catch(err => err)
 
