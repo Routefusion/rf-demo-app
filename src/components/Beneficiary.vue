@@ -805,9 +805,8 @@
 </template>
 
 <script>
+import * as rf from "../utils/sdk.js";
 import Spinner from "./Spinner.vue";
-import axios from "axios";
-import * as decode from "jwt-decode";
 import * as countryRegions from "../lib/countryRegions.js";
 import * as countries from "../lib/countries";
 
@@ -996,6 +995,18 @@ export default {
   },
 
   methods: {
+    getUserBeneficiaries() {
+      return rf
+        .getBen()
+        .then(resp => {
+          this.beneficiaries = resp.data;
+          console.log(resp.data);
+          return resp.data;
+        })
+        .catch(err => err);
+    },
+
+    //THIS.. How should we handle this..
     getBeneficiaryErrors(beneficiaries) {
       beneficiaries = beneficiaries || [];
       var userId = this.decodeToken().userId;
@@ -1129,94 +1140,64 @@ export default {
       }
     },
 
-    decodeToken() {
-      return decode(localStorage.token);
-    },
-
-    setHeaders() {
-      let token = localStorage.token;
-      return { headers: { token: token } };
-    },
-
     sendMoney(beneficaryId) {
       this.$router.push(`/rf/payments?sendTo=${beneficaryId}`);
     },
 
-    getUserBeneficiaries() {
-      let userId = this.decodeToken().userId;
-      return axios
-        .get(`${process.env.API_URL}/users/${userId}/beneficiaries`, this.setHeaders())
-        .then(resp => {
-          let beneficiariesArr = [];
-          this.beneficiaries = resp.data;
-
-          for (var i = 0; i < resp.data.length; i++) {
-            let beneficiary = resp.data[i];
-            beneficiariesArr.push(beneficiary);
-          }
-
-          return beneficiariesArr;
-        })
-        .catch(err => {
-          console.log("error", err);
-        });
-    },
-
     getBeneficiary(beneficiaryId) {
-      let userId = this.decodeToken().userId;
-      this.error = false;
-      this.loading = true;
+      rf
+        .getBen(beneficiaryId)
+        .then(resp => {})
+        .catch(err => {
+          var benObj = {
+            id: resp.id,
+            companyName: resp.company_name,
+            firstName: resp.first_name_on_account,
+            lastName: resp.last_name_on_account,
+            type: resp.type,
+            accountNumber: resp.account_number,
+            routingNumber: resp.routing_number,
+            country: resp.country,
+            clabe: resp.clabe,
+            bankName: resp.bank_name,
+            bankCity: resp.bank_city,
+            bankProvince: resp.bank_state_province,
+            branchName: resp.branch_name,
+            bankCode: resp.bank_city,
+            branchCode: resp.branch_code,
+            cpf: resp.cpfcnpj,
+            cnpj: resp.cpfcnpj,
+            email: resp.email,
+            phoneNumber: resp.bsb_number,
+            bsb: resp.bsb_number,
+            swiftBIC: resp.swift_bic,
+            address: resp.address1,
+            stateProvince: resp.state_province,
+            city: resp.city,
+            postalCode: resp.postal_code
+          };
+          this.beneficiary = benObj;
+          this.editBeneficiary = true;
+          this.loading = false;
+          this.e2 = 1;
 
-      axios.get(`${process.env.API_URL}/users/${userId}/beneficiaries/${beneficiaryId}`, this.setHeaders()).then(resp => {
-        this.beneficiary.id = resp.data.id;
-        this.beneficiary.companyName = resp.data.company_name;
-        this.beneficiary.firstName = resp.data.first_name_on_account;
-        this.beneficiary.lastName = resp.data.last_name_on_account;
-        this.beneficiary.type = resp.data.type;
-        this.beneficiary.accountNumber = resp.data.account_number;
-        this.beneficiary.routingNumber = resp.data.routing_number;
-        this.beneficiary.country = resp.data.country;
-        this.beneficiary.clabe = resp.data.clabe;
-        this.beneficiary.bankName = resp.data.bank_name;
-        this.beneficiary.bankCity = resp.data.bank_city;
-        this.beneficiary.bankProvince = resp.data.bank_state_province;
-        this.beneficiary.branchName = resp.data.branch_name;
-        this.beneficiary.bankCode = resp.data.bank_city;
-        this.beneficiary.branchCode = resp.data.branch_code;
-        this.beneficiary.cpf = resp.data.cpfcnpj;
-        this.beneficiary.cnpj = resp.data.cpfcnpj;
-        this.beneficiary.email = resp.data.email;
-        this.beneficiary.phoneNumber = resp.data.phone_number;
-        this.beneficiary.bsb = resp.data.bsb_number;
-        this.beneficiary.swiftBIC = resp.data.swift_bic;
-        this.beneficiary.address = resp.data.address1;
-        this.beneficiary.stateProvince = resp.data.state_province;
-        this.beneficiary.city = resp.data.city;
-        this.beneficiary.postalCode = resp.data.postal_code;
-        this.editBeneficiary = true;
-        this.loading = false;
-        this.e2 = 1;
+          // we run the below checks for the appended icons on the edit form
+          var bennyErr = this.verificationErrors.find(e => {
+            return e.beneficiary_id === resp.data.id;
+          });
 
-        // we run the below checks for the appended icons on the edit form
-        var bennyErr = this.verificationErrors.find(e => {
-          return e.beneficiary_id === resp.data.id;
+          // form errors
+          this.beneficiary.swiftError = this.checkError(bennyErr, "swift");
+          this.beneficiary.clabeError = this.checkError(bennyErr, "clabe");
+          this.beneficiary.ibanError = this.checkError(bennyErr, "iban");
+
+          return;
         });
-
-        // form errors
-        this.beneficiary.swiftError = this.checkError(bennyErr, "swift");
-        this.beneficiary.clabeError = this.checkError(bennyErr, "clabe");
-        this.beneficiary.ibanError = this.checkError(bennyErr, "iban");
-
-        return;
-      });
     },
 
     updateBeneficiary() {
-      let userId = this.decodeToken().userId;
-      let body = this.formatData();
-
-      axios
-        .put(`${process.env.API_URL}/users/${userId}/beneficiaries/${this.beneficiary.id}`, body, this.setHeaders())
+      rf
+        .updateBen(this.beneficiary.id, body)
         .then(resp => {
           this.editBeneficiary = false;
           this.updateSuccess = true;
@@ -1231,12 +1212,12 @@ export default {
     },
 
     submitForm() {
-      let userId = this.decodeToken().userId;
       let body = this.formatData();
 
-      axios
-        .post(`${process.env.API_URL}/users/${userId}/beneficiaries`, body, this.setHeaders())
-        .then(resp => {
+      rf
+        .createBen(body)
+        .then(res => {})
+        .catch(err => {
           this.error = false;
           this.createSuccess = true;
           this.addNewBeneficiary = false;
@@ -1249,7 +1230,6 @@ export default {
             beneficaryId: resp.data.id,
             tooltip: "Awaiting verification"
           };
-
           // add to all
           this.listItems[0].push(item);
 
