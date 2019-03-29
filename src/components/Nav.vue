@@ -93,7 +93,7 @@ export default {
         },
         {
           title: "Home",
-          path: "/dashboard",
+          path: "/",
           icon: "home"
         },
         {
