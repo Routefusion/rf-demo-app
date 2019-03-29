@@ -71,9 +71,8 @@
 
 <script>
 import Spinner from "./Spinner.vue";
-import axios from "axios";
-import * as decode from "jwt-decode";
 import numeral from "numeral";
+import * as rf from "../utils/sdk.js";
 import TransactionTable from "./dash-components/Transaction";
 
 export default {
@@ -121,9 +120,26 @@ export default {
     "transaction-table": TransactionTable
   },
 
+  created() {
+    this.loading = false;
+
+    rf
+      .getUser()
+      .then(res => {
+        if (res.verified) return;
+        else {
+          Object.assign(this.cards[2], {
+            icon: "warning",
+            data: "Not verified"
+          });
+        }
+      })
+      .catch(err => err);
+  },
+
   methods: {
     goToPayments(beneficaryId) {
-      this.$router.push(`/rf/payments?sendTo=${beneficaryId}`);
+      this.$router.push(`/payments?sendTo=${beneficaryId}`);
     },
 
     setTransactionData(data) {
@@ -174,27 +190,6 @@ export default {
 
     onTableUpdate(newValue) {
       this.tableData = newValue;
-    },
-
-    decodeToken() {
-      return decode(localStorage.token);
-    },
-
-    setHeaders: function() {
-      let token = localStorage.token;
-      return { headers: { token: token } };
-    }
-  },
-
-  created() {
-    this.loading = false;
-    var tokenData = this.decodeToken();
-    if (tokenData.verified) return;
-    if (!tokenData.verified) {
-      Object.assign(this.cards[2], {
-        icon: "warning",
-        data: "Not verified"
-      });
     }
   },
 
