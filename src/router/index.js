@@ -20,7 +20,7 @@ export default new Router({
       component: Dash,
       children: [
         {
-          path: 'dashboard',
+          path: '/',
           component: HelloWorld,
           name: 'Ciao'
         },
