@@ -58,9 +58,10 @@
 </template>
 
 <script>
+import * as rf from "../utils/sdk.js";
+import { getLocal } from "../utils/localStorage.js";
+
 import Footer from "./Footer";
-import axios from "axios";
-import * as decode from "jwt-decode";
 
 export default {
   data() {
@@ -88,22 +89,20 @@ export default {
   },
 
   created() {
-    var tokenData = decode(localStorage.token);
-    var self = this;
-    return axios
-      .get(`${process.env.API_URL}/users/${tokenData.userId}`, this.setHeaders())
-      .then(function(resp) {
-        self.user.firstName = self.capitalize(resp.data.first_name);
-        self.user.lastName = self.capitalize(resp.data.last_name);
-        self.user.email = resp.data.email;
-        self.mfaEnabled = resp.data.mfa_enabled;
-        self.user.mfaEnabled = resp.data.mfa_enabled;
-      })
-      .catch(function(err) {
-        console.log(err);
-        self.formError = true;
-        self.errorMessage = "There was an unknown error, please contact support@routefusion.co if the issue persists";
-      });
+    var user = getLocal("user");
+    if (!user.lastName) {
+      this.formError = true;
+      this.errorMessage = "There was an unknown error, please contact support@routefusion.co if the issue persists";
+    } else {
+      var userObj = {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        mfaEnabled: user.mfaEnabled
+      };
+      this.user = userObj;
+      this.mfaEnabled = user.mfaEnabled;
+    }
   },
 
   components: {
@@ -111,41 +110,38 @@ export default {
   },
 
   methods: {
-    setHeaders() {
-      let token = localStorage.token;
-      return { headers: { token: token } };
-    },
-
     submitForm() {
-      this.valid = !this.valid;
-      var self = this;
-      var tokenData = decode(localStorage.token);
-      var body = { mfa_enabled: self.mfaEnabled };
-
-      if (self.mfaEnabled !== self.user.mfaEnabled) {
-        return axios
-          .put(`${process.env.API_URL}/users/${tokenData.userId}`, body, self.setHeaders())
-          .then(function(resp) {
-            self.loading = true;
-            self.userUpdated = true;
-            self.user.mfaEnabled = self.mfaEnabled;
-            setTimeout(
-              function() {
-                self.userUpdated = false;
-                self.loading = false;
-              }.bind(self),
-              5000
-            );
-          })
-          .catch(function(err) {
-            console.error("there was an error", err);
-            self.formError = true;
-            self.errorMessage = "There was an unknown error, please contact support@routefusion.co if the issue persists";
-            if (err.response == undefined) {
-              self.errorMessage = err.message;
-            }
-          });
-      }
+      // this.valid = !this.valid;
+      // var self = this;
+      // var tokenData = decode(localStorage.token);
+      // var body = { mfa_enabled: self.mfaEnabled };
+      //***
+      //***do we need mfa?
+      //***
+      // if (self.mfaEnabled !== self.user.mfaEnabled) {
+      //   return axios
+      //     .put(`${process.env.API_URL}/users/${tokenData.userId}`, body, self.setHeaders())
+      //     .then(function(resp) {
+      //       self.loading = true;
+      //       self.userUpdated = true;
+      //       self.user.mfaEnabled = self.mfaEnabled;
+      //       setTimeout(
+      //         function() {
+      //           self.userUpdated = false;
+      //           self.loading = false;
+      //         }.bind(self),
+      //         5000
+      //       );
+      //     })
+      //     .catch(function(err) {
+      //       console.error("there was an error", err);
+      //       self.formError = true;
+      //       self.errorMessage = "There was an unknown error, please contact support@routefusion.co if the issue persists";
+      //       if (err.response == undefined) {
+      //         self.errorMessage = err.message;
+      //       }
+      //     });
+      // }
     },
 
     capitalize(str) {
