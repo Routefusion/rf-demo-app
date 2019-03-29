@@ -27,48 +27,50 @@
 </template>
 
 <script>
-  import axios from 'axios';
-  import * as decode from 'jwt-decode';
-  import * as moment from 'moment';
+import axios from "axios";
+import * as decode from "jwt-decode";
+import * as moment from "moment";
 
-  export default {
-    created () {
-      this.getData();
+export default {
+  created() {
+    this.getData();
+  },
+
+  methods: {
+    decodeToken() {
+      return decode(localStorage.token);
     },
 
-    methods: {
-      decodeToken () {
-        return decode(localStorage.token);
-      },
+    setHeaders: function() {
+      let token = localStorage.token;
+      return { headers: { token: token } };
+    },
 
-      setHeaders: function () {
-        let token = localStorage.token;
-        return { headers: {'token': token} }
-      },
+    getData: function() {
+      // we set self to this becasue we use the spread callback and we cannot access the vue this inside of it
+      let self = this;
+      let userId = this.decodeToken().userId;
+      let getTransactions = axios.get(`${process.env.API_URL}/users/${userId}/transactions/`, this.setHeaders());
+      let getBeneficiaries = axios.get(`${process.env.API_URL}/users/${userId}/beneficiaries`, this.setHeaders());
+      axios
+        .all([getTransactions, getBeneficiaries])
+        .then(
+          axios.spread((transactions, beneficiaries) => {
+            self.items = [];
 
-      getData: function () {
-        // we set self to this becasue we use the spread callback and we cannot access the vue this inside of it
-        let self = this;
-        let userId = this.decodeToken().userId;
-        let getTransactions = axios.get(`${process.env.API_URL}/users/${userId}/transactions/`, this.setHeaders())
-        let getBeneficiaries = axios.get(`${process.env.API_URL}/users/${userId}/beneficiaries`, this.setHeaders())
-        axios.all([getTransactions, getBeneficiaries])
-          .then(axios.spread((transactions, beneficiaries) => {
-
-
-            self.items = []
-
-            if (transactions.data.length ===  0) {
+            if (transactions.data.length === 0) {
               self.noData = true;
             }
 
             transactions.data.forEach(transaction => {
-              let fullBenName = '';
-              let companyName = '';
-              let type = '';
-              let beneficiaryId = '';
+              let fullBenName = "";
+              let companyName = "";
+              let type = "";
+              let beneficiaryId = "";
               let transactionDate = new Date(transaction.created_at);
-              transactionDate = moment(transactionDate).utc().format("YYYY-MM-DD HH:mm:ss");
+              transactionDate = moment(transactionDate)
+                .utc()
+                .format("YYYY-MM-DD HH:mm:ss");
 
               let benny = beneficiaries.data.find(benny => benny.id === transaction.beneficiary_id);
 
@@ -92,38 +94,37 @@
                 created_at: transactionDate + " UTC"
               });
             });
-            self.$emit('transaction-data', self.items);
-          }))
-          .catch((err) => {
-            self.noData = true;
-            console.log(err)
+            self.$emit("transaction-data", self.items);
           })
-      },
-      tableHeaders () {
-        return [
-          { text: 'Beneficiary', value: 'beneficiary',  align: 'left', sortable: false },
-          { text: 'Amount Funded', value: 'source_amount', align: 'left', sortable: false },
-          { text: 'Settlement Amount', value: 'destination_amount', align: 'left', sortable: false },
-          { text: 'Status', value: 'state', align: 'left', sortable: false },
-          { text: 'Created', value: 'created_at', align: 'left', sortable: false }
-        ];
-      }
+        )
+        .catch(err => {
+          self.noData = true;
+          console.log(err);
+        });
     },
-
-    data () {
-      return {
-        loading: false,
-        noData: false,
-        headers: this.tableHeaders(),
-        pagination: {
-          rowsPerPage: 8,
-          sortBy: 'created_at',
-          descending: true
-        },
-        items: [
-
-        ]
-      }
+    tableHeaders() {
+      return [
+        { text: "Beneficiary", value: "beneficiary", align: "left", sortable: false },
+        { text: "Amount Funded", value: "source_amount", align: "left", sortable: false },
+        { text: "Settlement Amount", value: "destination_amount", align: "left", sortable: false },
+        { text: "Status", value: "state", align: "left", sortable: false },
+        { text: "Created", value: "created_at", align: "left", sortable: false }
+      ];
     }
+  },
+
+  data() {
+    return {
+      loading: false,
+      noData: false,
+      headers: this.tableHeaders(),
+      pagination: {
+        rowsPerPage: 8,
+        sortBy: "created_at",
+        descending: true
+      },
+      items: []
+    };
   }
+};
 </script>

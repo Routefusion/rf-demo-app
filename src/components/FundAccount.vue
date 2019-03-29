@@ -2,7 +2,6 @@
   <v-app>
     <spin-baby-spin v-if="loading"></spin-baby-spin>
     <v-content>
-    <session-modal @stop-that-fool="refreshPage()"></session-modal>
       <v-container fluid>
         <v-alert type="error" :value="error">Your deposit was unsuccesful.  If this error happens again please reach out to support on your <b>telegram channel</b> or by emailing <b>info@routefusion.co</b></v-alert>
         <v-layout row>
@@ -125,125 +124,122 @@
 </template>
 
 <script>
-  import Spinner from './Spinner';
-  import SessionModal from './SessionModal';
-  import axios from 'axios';
-  import * as decode from 'jwt-decode';
-  import numeral from 'numeral';
+import Spinner from "./Spinner";
+import axios from "axios";
+import * as decode from "jwt-decode";
+import numeral from "numeral";
 
-  export default {
-    data () {
-      return {
-        userVerified: false,
-        user: {
-          verified: null
-        },
-        amount: '',
-        message: '',
-        loading: true,
-        valid: false,
-        depositSubmitted: false,
-        numberRules: [
-          v => !!v || 'Amount is required',
-          v => (isNaN(v) === false) || 'Amount must be a number'
-        ],
-        chargeInfo: {
+export default {
+  data() {
+    return {
+      userVerified: false,
+      user: {
+        verified: null
+      },
+      amount: "",
+      message: "",
+      loading: true,
+      valid: false,
+      depositSubmitted: false,
+      numberRules: [v => !!v || "Amount is required", v => isNaN(v) === false || "Amount must be a number"],
+      chargeInfo: {},
+      error: false
+    };
+  },
 
-        },
-        error: false
-      }
-    },
+  components: {
+    "spin-baby-spin": Spinner
+  },
 
-    components: {
-      'spin-baby-spin': Spinner,
-      'session-modal': SessionModal
-    },
-
-    methods: {
-      refreshPage: function () {
-        axios.all([this.getUser(), this.getAccount()])
-          .then(axios.spread((user, accounts) => {
+  methods: {
+    refreshPage: function() {
+      axios
+        .all([this.getUser(), this.getAccount()])
+        .then(
+          axios.spread((user, accounts) => {
             this.user = user.data;
             this.account = accounts.data[0];
             this.loading = false;
-          }))
-          .catch((err) => {
-            console.log(err)
           })
-      },
-
-      submit: function () {
-        let payload = this.formatPayload()
-        let userId = this.decodeToken().userId;
-
-        this.loading = true
-        axios.post(`${process.env.API_URL}/users/${userId}/deposit`, payload, this.setHeaders())
-          .then((resp) => {
-            console.log(resp)
-            this.chargeInfo = this.formatChargeInfo(resp.data.chargeInfo)
-            this.depositSubmitted = true;
-            this.loading = false;
-          })
-          .catch((err) => {
-            console.log(err)
-            this.loading = false;
-            this.error = true;
-          })
-      },
-
-      formatPayload () {
-        return {
-          "destAmount": this.amount,
-          "message": this.message
-        }
-      },
-
-      formatChargeInfo (obj) {
-        return [
-          {title: "Bank", data: obj.wireDetails.bankAddress},
-          {title: "Bank Phone Number", data: obj.wireDetails.bankPhone},
-          {title: "Account Number", data: obj.wireDetails.accountNumber},
-          {title: "Routing Number", data: obj.wireDetails.routingNumber},
-          {title: "Beneficiary", data: obj.wireDetails.beneficiary},
-          {title: "Beneficiary Address", data: obj.wireDetails.beneficiaryAddress}
-        ]
-      },
-
-      decodeToken () {
-        return decode(localStorage.token);
-      },
-
-      setHeaders: function () {
-        let token = localStorage.token;
-        return { headers: {'token': token } }
-      },
-
-      getUser: function () {
-        let userId = this.decodeToken().userId;
-        return axios.get(`${process.env.API_URL}/users/${userId}`, this.setHeaders())
-      },
-
-      sendToVerification: function () {
-        window.open('http://onboard.routefusion.co', '_blank');
-      }
+        )
+        .catch(err => {
+          console.log(err);
+        });
     },
 
-    created () {
-       if (decode(localStorage.token).verified === 'true') {
-        this.userVerified = true;
-      }
-      let self = this;
+    submit: function() {
+      let payload = this.formatPayload();
+      let userId = this.decodeToken().userId;
 
-      this.getUser()
-        .then((user) => {
-          console.log(user)
-          self.user = user.data;
-          self.loading = false;
+      this.loading = true;
+      axios
+        .post(`${process.env.API_URL}/users/${userId}/deposit`, payload, this.setHeaders())
+        .then(resp => {
+          console.log(resp);
+          this.chargeInfo = this.formatChargeInfo(resp.data.chargeInfo);
+          this.depositSubmitted = true;
+          this.loading = false;
         })
-        .catch((err) => {
-          console.log(err)
-        })
+        .catch(err => {
+          console.log(err);
+          this.loading = false;
+          this.error = true;
+        });
+    },
+
+    formatPayload() {
+      return {
+        destAmount: this.amount,
+        message: this.message
+      };
+    },
+
+    formatChargeInfo(obj) {
+      return [
+        { title: "Bank", data: obj.wireDetails.bankAddress },
+        { title: "Bank Phone Number", data: obj.wireDetails.bankPhone },
+        { title: "Account Number", data: obj.wireDetails.accountNumber },
+        { title: "Routing Number", data: obj.wireDetails.routingNumber },
+        { title: "Beneficiary", data: obj.wireDetails.beneficiary },
+        { title: "Beneficiary Address", data: obj.wireDetails.beneficiaryAddress }
+      ];
+    },
+
+    decodeToken() {
+      return decode(localStorage.token);
+    },
+
+    setHeaders: function() {
+      let token = localStorage.token;
+      return { headers: { token: token } };
+    },
+
+    getUser: function() {
+      let userId = this.decodeToken().userId;
+      return axios.get(`${process.env.API_URL}/users/${userId}`, this.setHeaders());
+    },
+
+    sendToVerification: function() {
+      window.open("http://onboard.routefusion.co", "_blank");
     }
+  },
+
+  created() {
+    if (decode(localStorage.token).verified === "true") {
+      this.userVerified = true;
+    }
+    let self = this;
+
+    this.getUser()
+      .then(user => {
+        console.log(user);
+        self.user = user.data;
+        self.loading = false;
+      })
+      .catch(err => {
+        console.log(err);
+      });
   }
+};
 </script>
 

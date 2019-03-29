@@ -2,7 +2,6 @@
   <v-app>
     <spin-baby-spin v-if="loading"></spin-baby-spin>
     <v-content>
-      <session-modal @stop-that-fool="loading = false"></session-modal>
       <v-container fluid v-if="loading == false">
         <v-layout row>
           <v-flex>
@@ -218,245 +217,235 @@
 </template>
 
 <script>
-  import Spinner from './Spinner';
-  import SessionModal from './SessionModal';
-  import axios from 'axios';
-  import numeral from 'numeral';
-  import * as decode from 'jwt-decode';
-  import {Decimal} from 'decimal.js';
+import Spinner from "./Spinner";
+import axios from "axios";
+import numeral from "numeral";
+import * as decode from "jwt-decode";
+import { Decimal } from "decimal.js";
 
-  export default {
-    data () {
-      return {
-        balance: '',
-        insufficientFunds: false,
-        user: null,
-        fee: 0,
-        rate: '',
-        USDMXNRate: '',
-        disableSubmit: false,
-        success: false,
-        valid: false,
-        loading: true,
-        currencyRates: null,
-        e6: 1,
-        beneficiaries: [],
-        payment: {
-          amount: '',
-          originCurrency: 0,
-          beneficiaryCurrency: 1,
-          beneficiary: {
-            text: '',
-            id: null
-          }
-        },
-        paymentError: false,
-        paymentErrorMessage: '',
-        e1: null,
-        items: [
-          { id: 0, text: 'USD' },
-          { id: 1, text: 'MXN' },
-          { id: 2, text: 'CNY' },
-          { id: 3, text: 'BRL' }
-        ],
-        nameRules: [
-          v => !!v || 'Name is required',
-          v => (v && v.length <= 15) || 'Name must be less than 15 characters'
-        ],
-        clabeRules: [
-          v => !! v || 'Clabe is require',
-          v => (v && v.length == 18) || 'A Clabe number is 18 digits long'
-        ]
-      }
-    },
-
-    components: {
-      'spin-baby-spin': Spinner,
-      'session-modal': SessionModal
-    },
-
-    methods: {
-
-      submit: function () {
-        this.disableSubmit = true;
-        const transferPayload = this.formatTransferData();
-        axios.post(`${process.env.API_URL}/transfers`, transferPayload, this.setHeaders())
-          .then((resp) => {
-            this.success = true;
-          })
-          .catch((err) => {
-            console.log('Transfer', err)
-            this.paymentErrorMessage = err.response.data.message;
-            this.paymentError = true;
-            setTimeout(() => this.paymentError = false, 10000);
-            this.reload();
-          })
-      },
-
-      reload: function () {
-        this.loading = true
-        this.e6 = 1
-        this.valid = false
-        this.success = false
-        this.payment.amount = ''
-        this.payment.originCurrency = 0
-        this.payment.beneficiaryCurrency = 1
-        this.payment.beneficiaryAmount = 0
-        this.payment.beneficiary.currency = ''
-        this.payment.beneficiary.text = ''
-        this.payment.beneficiary.id = null
-        this.disableSubmit = false
-        let self = this;
-
-        this.getUserBeneficiaries()
-          .then((beneficiariesArr) => {
-            return this.loading = false;
-          })
-          .catch((err) => {
-            console.log(err);
-          })
-      },
-
-      getTotal: function () {
-        if (this.payment.amount == '') {return 0}
-        let fee = numeral(this.fee)
-        let amount = numeral(this.payment.amount)
-        return this.payment.amount
-      },
-      // this get called with the vuetify event onchange for input
-      updateBeneficiaryCurrency: function () {
-        // calculate fee
-        if (this.payment.beneficiary.currency !== 'USD') {
-          this.fee = numeral(this.payment.amount * .015).format('0[.]000');
-          // calulate the amount with a fee
-          this.payment.amountWithFee = numeral(this.payment.amount - (this.payment.amount * .015)).format('0[.]000')
-          // calculate the beneficiary amount with the amount
-          this.payment.beneficiaryAmount = numeral(this.payment.amountWithFee * this.rate).format('0[.]00')
-        } else {
-          this.fee = 0
-          this.payment.amountWithFee = numeral(this.payment.amount).format('0[.]000')
-          // calculate the beneficiary amount with the amount
-          this.payment.beneficiaryAmount = numeral(this.payment.amount).format('0[.]00')
+export default {
+  data() {
+    return {
+      balance: "",
+      insufficientFunds: false,
+      user: null,
+      fee: 0,
+      rate: "",
+      USDMXNRate: "",
+      disableSubmit: false,
+      success: false,
+      valid: false,
+      loading: true,
+      currencyRates: null,
+      e6: 1,
+      beneficiaries: [],
+      payment: {
+        amount: "",
+        originCurrency: 0,
+        beneficiaryCurrency: 1,
+        beneficiary: {
+          text: "",
+          id: null
         }
       },
+      paymentError: false,
+      paymentErrorMessage: "",
+      e1: null,
+      items: [{ id: 0, text: "USD" }, { id: 1, text: "MXN" }, { id: 2, text: "CNY" }, { id: 3, text: "BRL" }],
+      nameRules: [v => !!v || "Name is required", v => (v && v.length <= 15) || "Name must be less than 15 characters"],
+      clabeRules: [v => !!v || "Clabe is require", v => (v && v.length == 18) || "A Clabe number is 18 digits long"]
+    };
+  },
 
-      getRatesNew: function (ticker) {
-        return axios.post(`https://api.sendwyre.com/v2/transfers/preview?sourceCurrency=USD&destCurrency=${ticker}&sourceAmount=1000&amountIncludesFees=false`)
-      },
+  components: {
+    "spin-baby-spin": Spinner
+  },
 
-      getOriginCurrency: function () {
-        return this.items.filter(obj => obj.id == this.payment.originCurrency)[0].text
-      },
-
-      getBeneficiaryCurrency: function () {
-        return this.items.filter(obj => obj.id == this.payment.beneficiaryCurrency)[0].text
-      },
-
-      formatTransferData: function () {
-        return {
-          user_id: this.decodeToken().userId,
-          beneficiary_id: this.payment.beneficiary.id,
-          source_amount: this.payment.amount,
-          exchange_rate: this.rate,
-          fee: this.fee,
-          total: this.getTotal(),
-          source_currency: this.getOriginCurrency(),
-          destination_currency: this.payment.beneficiary.currency,
-          destination_amount: this.payment.beneficiaryAmount
-        }
-      },
-
-      decodeToken () {
-        return decode(localStorage.token);
-      },
-
-      setHeaders: function () {
-        let token = localStorage.token;
-        return { headers: {'token': token } }
-      },
-
-      getUserBeneficiaries: function () {
-        let userId = this.decodeToken().userId;
-        return axios.get(`${process.env.API_URL}/users/${userId}/beneficiaries`, this.setHeaders())
-          .then(resp => {
-            let beneficiariesArr = [];
-
-            for(var i = 0; i < resp.data.length; i++) {
-              let beneficiary = resp.data[i];
-
-              if (beneficiary.verified) {
-                beneficiariesArr.push({
-                  id: beneficiary.id,
-                  text: `${beneficiary.first_name_on_account} ${beneficiary.last_name_on_account}`,
-                  currency: beneficiary.currency
-                });
-              }
-            }
-
-            return this.beneficiaries = beneficiariesArr;
-          })
-          .catch(err => {
-            console.log('error', err)
-          })
-      },
-
-      sendToBeneficiaries () {
-        this.$router.push('beneficiaries')
-      },
-
-      sendToVerification () {
-        window.open('http://onboard.routefusion.co', '_blank');
-      },
-
-      getUser: function () {
-        let userId = this.decodeToken().userId;
-        return axios.get(`${process.env.API_URL}/users/${userId}`, this.setHeaders())
-      },
-
-      checkForCurrentBenny (beneficiariesArr) {
-        if(this.$route.query.sendTo) {
-          let beneficiaryId = this.$route.query.sendTo
-          let currentBeneficiary = beneficiariesArr.find((b) => {
-            if (b.id === parseInt(beneficiaryId)) {
-              return b
-            }
-          })
-          this.payment.beneficiary.id = beneficiaryId;
-          this.payment.beneficiary.text = currentBeneficiary.text;
-          this.payment.beneficiary.currency = currentBeneficiary.currency;
-          this.e6 = 2;
-        }
-      }
-
-      // getUserBalance: function () {
-      //   let userId = this.decodeToken().userId;
-      //   return axios.get(`${process.env.API_URL}/users/${userId}/balance`, this.setHeaders())
-      // },
+  methods: {
+    submit: function() {
+      this.disableSubmit = true;
+      const transferPayload = this.formatTransferData();
+      axios
+        .post(`${process.env.API_URL}/transfers`, transferPayload, this.setHeaders())
+        .then(resp => {
+          this.success = true;
+        })
+        .catch(err => {
+          console.log("Transfer", err);
+          this.paymentErrorMessage = err.response.data.message;
+          this.paymentError = true;
+          setTimeout(() => (this.paymentError = false), 10000);
+          this.reload();
+        });
     },
 
-    watch: {
-      'payment.beneficiary.currency': function (new_value, old_value) {
-        console.log(new_value)
-        if (new_value == undefined || new_value == '' || new_value == null) { return }
-        this.getRatesNew(new_value)
-          .then((response) => {
-            this.rate = response.data.exchangeRate;
-            this.payment.beneficiaryAmount = numeral(this.payment.amountWithFee * this.rate).format('0[.]00')
-          })
-      }
-    },
+    reload: function() {
+      this.loading = true;
+      this.e6 = 1;
+      this.valid = false;
+      this.success = false;
+      this.payment.amount = "";
+      this.payment.originCurrency = 0;
+      this.payment.beneficiaryCurrency = 1;
+      this.payment.beneficiaryAmount = 0;
+      this.payment.beneficiary.currency = "";
+      this.payment.beneficiary.text = "";
+      this.payment.beneficiary.id = null;
+      this.disableSubmit = false;
+      let self = this;
 
-    created() {
       this.getUserBeneficiaries()
         .then(beneficiariesArr => {
-          this.checkForCurrentBenny(beneficiariesArr);
+          return (this.loading = false);
         })
-      this.getUser()
-        .then(user => {
-          this.user = user.data
-          this.loading = false;
+        .catch(err => {
+          console.log(err);
+        });
+    },
+
+    getTotal: function() {
+      if (this.payment.amount == "") {
+        return 0;
+      }
+      let fee = numeral(this.fee);
+      let amount = numeral(this.payment.amount);
+      return this.payment.amount;
+    },
+    // this get called with the vuetify event onchange for input
+    updateBeneficiaryCurrency: function() {
+      // calculate fee
+      if (this.payment.beneficiary.currency !== "USD") {
+        this.fee = numeral(this.payment.amount * 0.015).format("0[.]000");
+        // calulate the amount with a fee
+        this.payment.amountWithFee = numeral(this.payment.amount - this.payment.amount * 0.015).format("0[.]000");
+        // calculate the beneficiary amount with the amount
+        this.payment.beneficiaryAmount = numeral(this.payment.amountWithFee * this.rate).format("0[.]00");
+      } else {
+        this.fee = 0;
+        this.payment.amountWithFee = numeral(this.payment.amount).format("0[.]000");
+        // calculate the beneficiary amount with the amount
+        this.payment.beneficiaryAmount = numeral(this.payment.amount).format("0[.]00");
+      }
+    },
+
+    getRatesNew: function(ticker) {
+      return axios.post(`https://api.sendwyre.com/v2/transfers/preview?sourceCurrency=USD&destCurrency=${ticker}&sourceAmount=1000&amountIncludesFees=false`);
+    },
+
+    getOriginCurrency: function() {
+      return this.items.filter(obj => obj.id == this.payment.originCurrency)[0].text;
+    },
+
+    getBeneficiaryCurrency: function() {
+      return this.items.filter(obj => obj.id == this.payment.beneficiaryCurrency)[0].text;
+    },
+
+    formatTransferData: function() {
+      return {
+        user_id: this.decodeToken().userId,
+        beneficiary_id: this.payment.beneficiary.id,
+        source_amount: this.payment.amount,
+        exchange_rate: this.rate,
+        fee: this.fee,
+        total: this.getTotal(),
+        source_currency: this.getOriginCurrency(),
+        destination_currency: this.payment.beneficiary.currency,
+        destination_amount: this.payment.beneficiaryAmount
+      };
+    },
+
+    decodeToken() {
+      return decode(localStorage.token);
+    },
+
+    setHeaders: function() {
+      let token = localStorage.token;
+      return { headers: { token: token } };
+    },
+
+    getUserBeneficiaries: function() {
+      let userId = this.decodeToken().userId;
+      return axios
+        .get(`${process.env.API_URL}/users/${userId}/beneficiaries`, this.setHeaders())
+        .then(resp => {
+          let beneficiariesArr = [];
+
+          for (var i = 0; i < resp.data.length; i++) {
+            let beneficiary = resp.data[i];
+
+            if (beneficiary.verified) {
+              beneficiariesArr.push({
+                id: beneficiary.id,
+                text: `${beneficiary.first_name_on_account} ${beneficiary.last_name_on_account}`,
+                currency: beneficiary.currency
+              });
+            }
+          }
+
+          return (this.beneficiaries = beneficiariesArr);
         })
-        .catch(err => console.log('getUser error'))
+        .catch(err => {
+          console.log("error", err);
+        });
+    },
+
+    sendToBeneficiaries() {
+      this.$router.push("beneficiaries");
+    },
+
+    sendToVerification() {
+      window.open("http://onboard.routefusion.co", "_blank");
+    },
+
+    getUser: function() {
+      let userId = this.decodeToken().userId;
+      return axios.get(`${process.env.API_URL}/users/${userId}`, this.setHeaders());
+    },
+
+    checkForCurrentBenny(beneficiariesArr) {
+      if (this.$route.query.sendTo) {
+        let beneficiaryId = this.$route.query.sendTo;
+        let currentBeneficiary = beneficiariesArr.find(b => {
+          if (b.id === parseInt(beneficiaryId)) {
+            return b;
+          }
+        });
+        this.payment.beneficiary.id = beneficiaryId;
+        this.payment.beneficiary.text = currentBeneficiary.text;
+        this.payment.beneficiary.currency = currentBeneficiary.currency;
+        this.e6 = 2;
+      }
     }
+
+    // getUserBalance: function () {
+    //   let userId = this.decodeToken().userId;
+    //   return axios.get(`${process.env.API_URL}/users/${userId}/balance`, this.setHeaders())
+    // },
+  },
+
+  watch: {
+    "payment.beneficiary.currency": function(new_value, old_value) {
+      console.log(new_value);
+      if (new_value == undefined || new_value == "" || new_value == null) {
+        return;
+      }
+      this.getRatesNew(new_value).then(response => {
+        this.rate = response.data.exchangeRate;
+        this.payment.beneficiaryAmount = numeral(this.payment.amountWithFee * this.rate).format("0[.]00");
+      });
+    }
+  },
+
+  created() {
+    this.getUserBeneficiaries().then(beneficiariesArr => {
+      this.checkForCurrentBenny(beneficiariesArr);
+    });
+    this.getUser()
+      .then(user => {
+        this.user = user.data;
+        this.loading = false;
+      })
+      .catch(err => console.log("getUser error"));
   }
+};
 </script>

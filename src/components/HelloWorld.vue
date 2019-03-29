@@ -118,7 +118,6 @@ export default {
 
   components: {
     "spin-baby-spin": Spinner,
-    "session-modal": SessionModal,
     "transaction-table": TransactionTable
   },
 

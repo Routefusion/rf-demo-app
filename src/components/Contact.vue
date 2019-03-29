@@ -61,81 +61,76 @@
 </template>
 
 <script>
-  import Footer from "./Footer";
-  import axios from "axios";
+import Footer from "./Footer";
+import axios from "axios";
 
-  export default {
-    data () {
-      return {
-        disableSignup: false,
-        firstName: '',
-        lastName: '',
-        email: '',
-        message: '',
-        title: '',
-        valid: null,
-        userCreated: false,
-        formError: false,
-        errorMessage: '',
-        rules: {
-          nameRules: [
-            v => !!v || 'Name is required'
-          ],
-          emailRules: [
-            v => !!v || 'E-mail is required',
-            v => /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v) || 'E-mail must be valid'
-          ]
-        }
+export default {
+  data() {
+    return {
+      disableSignup: false,
+      firstName: "",
+      lastName: "",
+      email: "",
+      message: "",
+      title: "",
+      valid: null,
+      userCreated: false,
+      formError: false,
+      errorMessage: "",
+      rules: {
+        nameRules: [v => !!v || "Name is required"],
+        emailRules: [v => !!v || "E-mail is required", v => /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v) || "E-mail must be valid"]
+      }
+    };
+  },
+  components: {
+    "app-footer": Footer
+  },
+  methods: {
+    validateForm() {
+      if (this.fullName.length < 1 || this.fullName.length > 50) {
+        this.formError = true;
+        this.errorMessage = "Full Name must be between 1 and 50 characters long";
+        return false;
+      } else if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(this.email)) {
+        this.formError = true;
+        this.errorMessage = "Please provide a valid email";
+        return false;
+      } else {
+        return true;
       }
     },
-    components: {
-      'app-footer': Footer
-    },
-    methods: {
-  
-      validateForm () {
-        if (this.fullName.length < 1 || this.fullName.length > 50) {
-          this.formError = true;
-          this.errorMessage = "Full Name must be between 1 and 50 characters long";
-          return false;
-        } else if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(this.email)) {
-          this.formError = true;
-          this.errorMessage = "Please provide a valid email";
-          return false;
-        } else {
-          return true;
-        }
-      },
 
-      submitForm () {
-        this.valid = !this.valid;
-        if (this.validateForm()) {
-          var params = {
-            full_name: this.fullName,
-            email: this.email,
-            title: this.title,
-            message: this.message
-          }
-          return axios.post(`${process.env.API_URL}/contact`, params)
-            .then((resp) => {
-              this.userCreated = true;
-              this.disableSignup = true;
-            })
-            .catch((err) => {
-              console.error("there was an error", err)
-              this.formError = true;
-              if (err.response == undefined) {
-                this.errorMessage = err.message;
-              }
+    submitForm() {
+      this.valid = !this.valid;
+      if (this.validateForm()) {
+        var params = {
+          full_name: this.fullName,
+          email: this.email,
+          title: this.title,
+          message: this.message
+        };
+        return axios
+          .post(`${process.env.API_URL}/contact`, params)
+          .then(resp => {
+            this.userCreated = true;
+            this.disableSignup = true;
+          })
+          .catch(err => {
+            console.error("there was an error", err);
+            this.formError = true;
+            if (err.response == undefined) {
+              this.errorMessage = err.message;
+            }
 
-              if (err.response.data == "duplicate key value violates unique constraint \"users_email_key\"") {
-                this.errorMessage = "Email is already in use";
-              }
-              
-              this.valid = !this.valid;
-            })
-        }
+            if (err.response.data == 'duplicate key value violates unique constraint "users_email_key"') {
+              this.errorMessage = "Email is already in use";
+            }
+
+            this.valid = !this.valid;
+          });
       }
     }
   }
+};
 </script>

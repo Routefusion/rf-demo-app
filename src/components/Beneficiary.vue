@@ -1,7 +1,6 @@
 <template>
   <v-content>
     <spin-baby-spin v-if="loading"></spin-baby-spin>
-    <session-modal @stop-that-fool="refreshPage()"></session-modal>
     <!-- TODO this needs to be a better error -->
     <v-alert type="error" :value="error">
       There was an error, please contact RouteFusion support at <strong>support@routefusion.co</strong> if the problem continues.
@@ -806,186 +805,284 @@
 </template>
 
 <script>
-  import Spinner from './Spinner.vue';
-  import SessionModal from './SessionModal';
-  import axios from 'axios';
-  import * as decode from 'jwt-decode';
-  import * as countryRegions from '../lib/countryRegions.js';
-  import * as countries from '../lib/countries';
+import Spinner from "./Spinner.vue";
+import axios from "axios";
+import * as decode from "jwt-decode";
+import * as countryRegions from "../lib/countryRegions.js";
+import * as countries from "../lib/countries";
 
-  export default {
-    data () {
-      return {
-        loading: true,
-        editBeneficiary: false,
-        userVerifySubmitted: null,
-        createSuccess: false,
-        updateSuccess: false,
-        error: false,
-        valid: false,
-        valid2: false,
-        valid3: false,
-        menu: false,
-        e1: 0,
-        e2: 0,
-        countries: countries,
-        countryMap: {
-          "AT": {name: "Austria", currencyCode: "EUR"},
-          "AU": {name: "Australia", currencyCode: "AUD"},
-          "BE": {name: "Belgium", currencyCode: "EUR"},
-          "BR": {name: "Brazil", currencyCode: "BRL"},
-          "CN": {name: "China", currencyCode: "CNY"},
-          "CY": {name: "Cyprus", currencyCode: "EUR"},
-          "EE": {name: "Estonia", currencyCode: "EUR"},
-          "FI": {name: "Finland", currencyCode: "EUR"},
-          "FR": {name: "France", currencyCode: "EUR"},
-          "DE": {name: "Germany", currencyCode: "EUR"},
-          "GR": {name: "Greece", currencyCode: "EUR"},
-          "IE": {name: "Ireland", currencyCode: "EUR"},
-          "IT": {name: "Italy", currencyCode: "EUR"},
-          "LV": {name: "Latvia", currencyCode: "EUR"},
-          "LT": {name: "Lithuania", currencyCode: "EUR"},
-          "LU": {name: "Luxembourg", currencyCode: "EUR"},
-          "MT": {name: "Malta", currencyCode: "EUR"},
-          "MX": {name: "Mexico", currencyCode: "MXN"},
-          "NL": {name: "Netherlands", currencyCode: "EUR"},
-          "PT": {name: "Portugal", currencyCode: "EUR"},
-          "SK": {name: "Slovakia", currencyCode: "EUR"},
-          "SI": {name: "Slovenia", currencyCode: "EUR"},
-          "ES": {name: "Spain", currencyCode: "EUR"},
-          "GB": {name: "United Kingdom", currencyCode: "GBP"},
-          "US": {name: "United States", currencyCode: "USD"},
-          "PH": {name: "Republic of the Philippines", currencyCode: "PHP"}
+export default {
+  data() {
+    return {
+      loading: true,
+      editBeneficiary: false,
+      userVerifySubmitted: null,
+      createSuccess: false,
+      updateSuccess: false,
+      error: false,
+      valid: false,
+      valid2: false,
+      valid3: false,
+      menu: false,
+      e1: 0,
+      e2: 0,
+      countries: countries,
+      countryMap: {
+        AT: { name: "Austria", currencyCode: "EUR" },
+        AU: { name: "Australia", currencyCode: "AUD" },
+        BE: { name: "Belgium", currencyCode: "EUR" },
+        BR: { name: "Brazil", currencyCode: "BRL" },
+        CN: { name: "China", currencyCode: "CNY" },
+        CY: { name: "Cyprus", currencyCode: "EUR" },
+        EE: { name: "Estonia", currencyCode: "EUR" },
+        FI: { name: "Finland", currencyCode: "EUR" },
+        FR: { name: "France", currencyCode: "EUR" },
+        DE: { name: "Germany", currencyCode: "EUR" },
+        GR: { name: "Greece", currencyCode: "EUR" },
+        IE: { name: "Ireland", currencyCode: "EUR" },
+        IT: { name: "Italy", currencyCode: "EUR" },
+        LV: { name: "Latvia", currencyCode: "EUR" },
+        LT: { name: "Lithuania", currencyCode: "EUR" },
+        LU: { name: "Luxembourg", currencyCode: "EUR" },
+        MT: { name: "Malta", currencyCode: "EUR" },
+        MX: { name: "Mexico", currencyCode: "MXN" },
+        NL: { name: "Netherlands", currencyCode: "EUR" },
+        PT: { name: "Portugal", currencyCode: "EUR" },
+        SK: { name: "Slovakia", currencyCode: "EUR" },
+        SI: { name: "Slovenia", currencyCode: "EUR" },
+        ES: { name: "Spain", currencyCode: "EUR" },
+        GB: { name: "United Kingdom", currencyCode: "GBP" },
+        US: { name: "United States", currencyCode: "USD" },
+        PH: { name: "Republic of the Philippines", currencyCode: "PHP" }
+      },
+      regions: countryRegions,
+      beneficiary: {
+        defaultCurrency: "EUR",
+        country: null,
+        type: undefined
+      },
+      addNewBeneficiary: false,
+      tabs: [
+        {
+          id: 0,
+          title: "ALL",
+          content: "Ciao"
         },
-        regions: countryRegions,
-        beneficiary: {
-          defaultCurrency: "EUR",
-          country: null,
-          type: undefined
+        {
+          id: 1,
+          title: "BUSINESS",
+          content: "Hola"
         },
-        addNewBeneficiary: false,
-        tabs: [
-          {
-            id: 0,
-            title: "ALL",
-            content: "Ciao"
-          },
-          {
-            id: 1,
-            title: "BUSINESS",
-            content: "Hola"
-          },
-          {
-            id: 2,
-            title: "PERSONAL",
-            content: "Bonjour"
+        {
+          id: 2,
+          title: "PERSONAL",
+          content: "Bonjour"
+        }
+      ],
+      //TODO We need better validation, rules are not enough.
+      rules: {
+        phone: [v => !v || !/[a-zA-Z\[-\]={}\/\\\|?><!@#$%^&*;'"]+/.test(v) || "Field contains invalid characters"],
+        required: [v => !!v || "Field is required"],
+        name: [v => !!v || "Name is required", v => (v && v.length <= 60) || "Name must be less than 60 characters"],
+        routingNumber: [v => !!v || "Must provide routing number", v => !/[a-zA-Z]/.test(v) || "Must contain only numbers", v => (v && v.length === 9) || "Routing number must be 9 digits"],
+        sortCode: [v => !!v || "Must provide sort code", v => !/[a-zA-Z]/.test(v) || "Must contain only numbers", v => (v && v.length === 6) || "Sort code must be 6 digits"],
+        accountNumber: [v => !!v || "Must provide account number", v => !/[a-zA-Z]/.test(v) || "Must contain only numbers"],
+        iban: [
+          v => !!v || "Must provide IBAN",
+          v => (!!v && /^[A-Za-z]{2}/.test(v)) || "First 2 characters much be country code e.g. FR7630006000011234567890189",
+          v => (!!v && !/[\[-\]={}\/\\\|?><!@#$%^&*;'"]+/.test(v)) || "Only letters and numbers are valid"
+        ],
+        bankCode: [v => !!v || "Bank Code required", v => (v && v.length === 3) || "Bank Code can only be 3 digits"],
+        bsb: [v => !!v || "Bank Code required", v => (v && v.length === 6) || "BSB number can only be 6 digits"],
+        swiftBIC: [v => !!v || "Swift or BIC Code is required", v => (v && v.length === 8) || v.length === 11 || "Swift/BIC code can only be 8 or 11 digits"],
+        branchCode: [v => !!v || "Branch Code required", v => (v && v.length === 4) || "Branch Code can only be 4 digits"],
+        clabe: [v => !/[a-zA-Z]/.test(v) || "Must contain only numbers", v => !!v || "Clabe is required", v => (v && v.length === 18) || "A Clabe number is 18 digits long"],
+        cpf: [v => !/[a-zA-Z]/.test(v) || "Must contain only numbers", v => !!v || "CPF (Natural Persons Register) is required", v => (v && v.length == 11) || "A CPF number is 11 digits long"],
+        cnpj: [
+          v => !/[a-zA-Z]/.test(v) || "Must contain only numbers",
+          v => !!v || "CPNJ (National Juridicial Persons Register) is required",
+          v => (v && v.length == 14) || "A CNPJ number is 14 digits long"
+        ],
+        //TODO fix email rule, does not seem to be doing anything
+        email: [v => /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v) || "E-mail must be valid"]
+      },
+      listItems: [[{ id: 0, title: "ALL", header: "Beneficiaries" }], [{ id: 0, title: "BUSINESS", header: "Beneficiaries" }], [{ id: 0, title: "PERSONAL", header: "Beneficiaries" }]],
+      verificationErrors: null
+    };
+  },
+
+  components: {
+    "spin-baby-spin": Spinner
+  },
+
+  created() {
+    // gets beneficiaries then sets up the data structure for the list
+    if (this.$route.query.userVerifySubmitted === true) {
+      this.userVerifySubmitted = true;
+    }
+
+    this.getUserBeneficiaries()
+      .then(resp => {
+        let business = resp.filter(b => {
+          if (b.type === "business") return b;
+        });
+        let individual = resp.filter(b => {
+          if (b.type === "personal") return b;
+        });
+        let all = resp;
+        let arr;
+
+        this.getBeneficiaryErrors(all).then(beneficiaryErrors => {
+          for (var n = 0; n < 3; n++) {
+            if (n === 0) {
+              arr = all;
+            } else if (n === 1) {
+              arr = business;
+            } else {
+              arr = individual;
+            }
+
+            this.setListItems(arr, n);
           }
-        ],
-        //TODO We need better validation, rules are not enough.
-        rules: {
-          phone: [
-            v => (!v || !/[a-zA-Z\[-\]={}\/\\\|?><!@#$%^&*;'"]+/.test(v)) || 'Field contains invalid characters'
-          ],
-          required: [
-            v => !!v || 'Field is required'
-          ],
-          name: [
-            v => !!v || 'Name is required',
-            v => (v && v.length <= 60) || 'Name must be less than 60 characters'
-          ],
-          routingNumber: [
-            v => !!v || 'Must provide routing number',
-            v => !/[a-zA-Z]/.test(v) || 'Must contain only numbers',
-            v => (v && v.length === 9) || 'Routing number must be 9 digits'
-          ],
-          sortCode: [
-            v => !!v || 'Must provide sort code',
-            v => !/[a-zA-Z]/.test(v) || 'Must contain only numbers',
-            v => (v && v.length === 6) || 'Sort code must be 6 digits'
-          ],
-          accountNumber: [
-            v => !!v || 'Must provide account number',
-            v =>  !/[a-zA-Z]/.test(v) || 'Must contain only numbers'
-          ],
-          iban: [
-            v => !!v || 'Must provide IBAN',
-            v => (!!v && /^[A-Za-z]{2}/.test(v)) || 'First 2 characters much be country code e.g. FR7630006000011234567890189',
-            v => (!!v && !/[\[-\]={}\/\\\|?><!@#$%^&*;'"]+/.test(v) )|| 'Only letters and numbers are valid'
-          ],
-          bankCode: [
-            v => !!v || 'Bank Code required',
-            v => (v && v.length === 3) || 'Bank Code can only be 3 digits'
-          ],
-          bsb: [
-            v => !!v || 'Bank Code required',
-            v => (v && v.length === 6) || 'BSB number can only be 6 digits'
-          ],
-          swiftBIC: [
-            v => !!v || 'Swift or BIC Code is required',
-            v => (v && v.length === 8 || v.length === 11) || 'Swift/BIC code can only be 8 or 11 digits'
-          ],
-          branchCode: [
-            v => !!v || 'Branch Code required',
-            v => (v && v.length === 4) || 'Branch Code can only be 4 digits'
-          ],
-          clabe: [
-            v =>  !/[a-zA-Z]/.test(v) || 'Must contain only numbers',
-            v => !!v || 'Clabe is required',
-            v => (v && v.length === 18) || 'A Clabe number is 18 digits long'
-          ],
-          cpf: [
-            v =>  !/[a-zA-Z]/.test(v) || 'Must contain only numbers',
-            v => !!v || 'CPF (Natural Persons Register) is required',
-            v => (v && v.length == 11) || 'A CPF number is 11 digits long'
-          ],
-          cnpj: [
-            v =>  !/[a-zA-Z]/.test(v) || 'Must contain only numbers',
-            v => !!v || 'CPNJ (National Juridicial Persons Register) is required',
-            v => (v && v.length == 14) || 'A CNPJ number is 14 digits long'
-          ],
-          //TODO fix email rule, does not seem to be doing anything
-          email: [
-            v => /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v) || 'E-mail must be valid'
-          ]
-        },
-        listItems: [
-          [
-            { id: 0, title: 'ALL', header: 'Beneficiaries'}
-          ],
-          [
-            { id: 0, title: 'BUSINESS', header: 'Beneficiaries'}
-          ],
-          [
-            { id: 0, title: 'PERSONAL', header: 'Beneficiaries'}
-          ]
-        ],
-        verificationErrors: null
+        });
+      })
+      .catch(err => console.log(err));
+  },
+
+  mounted() {
+    this.loading = false;
+  },
+
+  watch: {
+    createSuccess: function(newVal, oldVal) {
+      if (newVal) {
+        setTimeout(
+          function() {
+            this.createSuccess = false;
+          }.bind(this),
+          10000
+        );
+      }
+    },
+    updateSuccess: function(newVal, oldVal) {
+      if (newVal) {
+        setTimeout(
+          function() {
+            this.updateSuccess = false;
+          }.bind(this),
+          10000
+        );
+      }
+    },
+    error: function(newVal, oldVal) {
+      if (newVal) {
+        setTimeout(
+          function() {
+            this.error = false;
+          }.bind(this),
+          20000
+        );
+      }
+    }
+  },
+
+  computed: {
+    beneficiaryCurrency: function() {
+      if (this.beneficiary.country == null) {
+        return;
+      }
+      return this.countryMap[this.beneficiary.country].currencyCode;
+    }
+  },
+
+  methods: {
+    getBeneficiaryErrors(beneficiaries) {
+      beneficiaries = beneficiaries || [];
+      var userId = this.decodeToken().userId;
+      var unverifiedBennyIds = [];
+      beneficiaries.forEach(b => {
+        if (!b.verified) unverifiedBennyIds.push(b.id);
+      });
+
+      return axios
+        .get(`${process.env.API_URL}/users/${userId}/logs?type=verification_errors`, this.setHeaders())
+        .then(resp => {
+          this.verificationErrors = resp.data.filter(log => {
+            if (unverifiedBennyIds.includes(log.beneficiary_id)) return log;
+          });
+        })
+        .catch(err => console.log(err));
+    },
+
+    translateVerificationErrors(bennyError, country) {
+      if (typeof bennyError === "object" && bennyError.data instanceof Array) {
+        var errArr = [];
+        bennyError.data.forEach(error => {
+          if ((error.Code === 53 || error.Code === 55) && country !== "AU") {
+            errArr.push("- Swift / BIC code is invalid");
+          }
+
+          if (error.Code === 54 && country === "GB") {
+            errArr.push("- Sort key is invalid");
+          }
+
+          if (error.Code === 54 && country === "AU") {
+            errArr.push("- BSB number is invalid");
+          }
+
+          if (error.Code === 72) {
+            errArr.push("- IBAN is invalid");
+          }
+
+          if (error.Code === 2 && country !== "AU") {
+            errArr.push("- IBAN is invalid");
+          }
+        });
+
+        if (errArr.length < 1) return "Awaiting verification";
+
+        return errArr.join(" ");
+      }
+      return "Awaiting verification";
+    },
+
+    checkError(bennyError, field) {
+      if (typeof bennyError === "object" && bennyError.data instanceof Array) {
+        var result = false;
+        bennyError.data.forEach(error => {
+          if ((error.Code === 53 || error.Code === 55) && field === "swift") result = true;
+          if ((error.Code === 72 || error.Code === 2) && field === "iban") result = true;
+          if (error.Code === 54 && field === "sortCode") result = true;
+        });
+        return result;
       }
     },
 
-    components: {
-      'spin-baby-spin': Spinner,
-      'session-modal': SessionModal
-    },
-
-    created () {
-      // gets beneficiaries then sets up the data structure for the list
-      if(this.$route.query.userVerifySubmitted === true) {
+    refreshPage() {
+      if (this.$route.query.userVerifySubmitted === true) {
         this.userVerifySubmitted = true;
       }
 
-      this.getUserBeneficiaries()
-        .then(resp => {
-          let business = resp.filter((b) => { if(b.type === 'business') return b; });
-          let individual = resp.filter((b) => { if(b.type === 'personal') return b; });
+      if (typeof this.beneficiaries === "undefined") {
+        this.getUserBeneficiaries().then(resp => {
+          let business = resp.filter(b => {
+            if (b.type === "business") {
+              return b;
+            }
+          });
+          let individual = resp.filter(b => {
+            if (b.type === "personal") {
+              return b;
+            }
+          });
           let all = resp;
           let arr;
 
-          this.getBeneficiaryErrors(all).then(beneficiaryErrors => {
-            for(var n = 0; n < 3; n++) {
-              if(n === 0) {
+          this.getBeneficiaryErrors(all).then(bennyErrors => {
+            for (var n = 0; n < 3; n++) {
+              if (n === 0) {
                 arr = all;
-              } else if(n === 1) {
+              } else if (n === 1) {
                 arr = business;
               } else {
                 arr = individual;
@@ -993,399 +1090,273 @@
 
               this.setListItems(arr, n);
             }
-          })
+          });
+          return this.listItems;
+        });
+      }
+    },
+
+    setListItems(beneficiariesArr, listIndex) {
+      var bennyErr;
+      for (let i = 0; i < beneficiariesArr.length; i++) {
+        bennyErr = this.verificationErrors.find(e => {
+          return e.beneficiary_id === beneficiariesArr[i].id;
+        });
+        if (i === beneficiariesArr.length - 1) {
+          if (beneficiariesArr.length > 0) {
+            this.listItems[listIndex].push({
+              title: beneficiariesArr[i].company_name || beneficiariesArr[i].first_name_on_account,
+              subtitle: `<span class='text--primary'>Type: ${beneficiariesArr[i].type}</span> &mdash; ${beneficiariesArr[i].country}`,
+              type: beneficiariesArr[i].type,
+              verified: beneficiariesArr[i].verified,
+              beneficaryId: beneficiariesArr[i].id,
+              tooltip: beneficiariesArr[i].verified ? "Send payment" : this.translateVerificationErrors(bennyErr, beneficiariesArr[i].country)
+            });
+          }
+        } else {
+          this.listItems[listIndex].push(
+            {
+              title: beneficiariesArr[i].company_name || beneficiariesArr[i].first_name_on_account,
+              subtitle: `<span class='text--primary'>Type: ${beneficiariesArr[i].type}</span> &mdash; ${beneficiariesArr[i].country}`,
+              type: beneficiariesArr[i].type,
+              verified: beneficiariesArr[i].verified,
+              beneficaryId: beneficiariesArr[i].id,
+              tooltip: beneficiariesArr[i].verified ? "Send payment" : this.translateVerificationErrors(bennyErr, beneficiariesArr[i].country)
+            },
+            { divider: true, inset: true }
+          );
+        }
+      }
+    },
+
+    decodeToken() {
+      return decode(localStorage.token);
+    },
+
+    setHeaders() {
+      let token = localStorage.token;
+      return { headers: { token: token } };
+    },
+
+    sendMoney(beneficaryId) {
+      this.$router.push(`/rf/payments?sendTo=${beneficaryId}`);
+    },
+
+    getUserBeneficiaries() {
+      let userId = this.decodeToken().userId;
+      return axios
+        .get(`${process.env.API_URL}/users/${userId}/beneficiaries`, this.setHeaders())
+        .then(resp => {
+          let beneficiariesArr = [];
+          this.beneficiaries = resp.data;
+
+          for (var i = 0; i < resp.data.length; i++) {
+            let beneficiary = resp.data[i];
+            beneficiariesArr.push(beneficiary);
+          }
+
+          return beneficiariesArr;
         })
-        .catch(err => console.log(err))
+        .catch(err => {
+          console.log("error", err);
+        });
     },
 
-    mounted () {
-      this.loading = false;
-    },
+    getBeneficiary(beneficiaryId) {
+      let userId = this.decodeToken().userId;
+      this.error = false;
+      this.loading = true;
 
-    watch: {
-      createSuccess: function(newVal, oldVal) {
-        if (newVal) {
-          setTimeout(function () {
-            this.createSuccess = false
-          }.bind(this), 10000);
-        }
-      },
-      updateSuccess: function(newVal, oldVal) {
-        if (newVal) {
-          setTimeout(function () {
-            this.updateSuccess = false
-          }.bind(this), 10000);
-        }
-      },
-      error: function(newVal, oldVal) {
-        if (newVal) {
-          setTimeout(function () {
-            this.error = false
-          }.bind(this), 20000);
-        }
-      }
-    },
+      axios.get(`${process.env.API_URL}/users/${userId}/beneficiaries/${beneficiaryId}`, this.setHeaders()).then(resp => {
+        this.beneficiary.id = resp.data.id;
+        this.beneficiary.companyName = resp.data.company_name;
+        this.beneficiary.firstName = resp.data.first_name_on_account;
+        this.beneficiary.lastName = resp.data.last_name_on_account;
+        this.beneficiary.type = resp.data.type;
+        this.beneficiary.accountNumber = resp.data.account_number;
+        this.beneficiary.routingNumber = resp.data.routing_number;
+        this.beneficiary.country = resp.data.country;
+        this.beneficiary.clabe = resp.data.clabe;
+        this.beneficiary.bankName = resp.data.bank_name;
+        this.beneficiary.bankCity = resp.data.bank_city;
+        this.beneficiary.bankProvince = resp.data.bank_state_province;
+        this.beneficiary.branchName = resp.data.branch_name;
+        this.beneficiary.bankCode = resp.data.bank_city;
+        this.beneficiary.branchCode = resp.data.branch_code;
+        this.beneficiary.cpf = resp.data.cpfcnpj;
+        this.beneficiary.cnpj = resp.data.cpfcnpj;
+        this.beneficiary.email = resp.data.email;
+        this.beneficiary.phoneNumber = resp.data.phone_number;
+        this.beneficiary.bsb = resp.data.bsb_number;
+        this.beneficiary.swiftBIC = resp.data.swift_bic;
+        this.beneficiary.address = resp.data.address1;
+        this.beneficiary.stateProvince = resp.data.state_province;
+        this.beneficiary.city = resp.data.city;
+        this.beneficiary.postalCode = resp.data.postal_code;
+        this.editBeneficiary = true;
+        this.loading = false;
+        this.e2 = 1;
 
-    computed: {
-      beneficiaryCurrency: function () {
-        if (this.beneficiary.country == null) {return}
-        return this.countryMap[this.beneficiary.country].currencyCode
-      }
-    },
-
-    methods: {
-      getBeneficiaryErrors (beneficiaries) {
-        beneficiaries = beneficiaries || [];
-        var userId = this.decodeToken().userId;
-        var unverifiedBennyIds = [];
-        beneficiaries.forEach(b => {
-          if (!b.verified) unverifiedBennyIds.push(b.id);
+        // we run the below checks for the appended icons on the edit form
+        var bennyErr = this.verificationErrors.find(e => {
+          return e.beneficiary_id === resp.data.id;
         });
 
-        return axios.get(`${process.env.API_URL}/users/${userId}/logs?type=verification_errors`, this.setHeaders())
-          .then((resp) => {
-            this.verificationErrors = resp.data.filter((log) => { if (unverifiedBennyIds.includes(log.beneficiary_id)) return log; });
-          })
-          .catch((err) => console.log(err));
-      },
+        // form errors
+        this.beneficiary.swiftError = this.checkError(bennyErr, "swift");
+        this.beneficiary.clabeError = this.checkError(bennyErr, "clabe");
+        this.beneficiary.ibanError = this.checkError(bennyErr, "iban");
 
-      translateVerificationErrors (bennyError, country) {
-        if (typeof bennyError === 'object' && bennyError.data instanceof Array) {
-          var errArr = [];
-          bennyError.data.forEach((error) => {
-            if ((error.Code === 53 || error.Code === 55) && country !== 'AU') {
-              errArr.push('- Swift / BIC code is invalid');
-            }
+        return;
+      });
+    },
 
-            if (error.Code === 54 && country === 'GB') {
-              errArr.push('- Sort key is invalid');
-            }
+    updateBeneficiary() {
+      let userId = this.decodeToken().userId;
+      let body = this.formatData();
 
-            if (error.Code === 54 && country === 'AU') {
-              errArr.push('- BSB number is invalid');
-            }
+      axios
+        .put(`${process.env.API_URL}/users/${userId}/beneficiaries/${this.beneficiary.id}`, body, this.setHeaders())
+        .then(resp => {
+          this.editBeneficiary = false;
+          this.updateSuccess = true;
+          this.resetFormData();
+        })
+        .catch(err => {
+          console.log("error", err);
+          this.error = true;
+          this.editBeneficiary = false;
+          this.resetFormData();
+        });
+    },
 
-            if (error.Code === 72) {
-              errArr.push('- IBAN is invalid');
-            }
+    submitForm() {
+      let userId = this.decodeToken().userId;
+      let body = this.formatData();
 
-            if (error.Code === 2 && country !== 'AU') {
-              errArr.push('- IBAN is invalid');
-            }
+      axios
+        .post(`${process.env.API_URL}/users/${userId}/beneficiaries`, body, this.setHeaders())
+        .then(resp => {
+          this.error = false;
+          this.createSuccess = true;
+          this.addNewBeneficiary = false;
+          this.userVerifySubmitted = false;
+          var item = {
+            avatar: "",
+            title: resp.data.first_name_on_account,
+            subtitle: `<span class='text--primary'>Type: ${resp.data.type}</span> &mdash; ${resp.data.country}`,
+            type: resp.data.type,
+            beneficaryId: resp.data.id,
+            tooltip: "Awaiting verification"
+          };
 
-          })
+          // add to all
+          this.listItems[0].push(item);
 
-          if (errArr.length < 1) return 'Awaiting verification';
-
-          return errArr.join(' ');
-        }
-        return 'Awaiting verification'
-      },
-
-      checkError (bennyError, field) {
-        if (typeof bennyError === 'object' && bennyError.data instanceof Array) {
-          var result = false;
-          bennyError.data.forEach((error) => {
-            if ((error.Code === 53 || error.Code === 55) && field === 'swift') result = true;
-            if ((error.Code === 72 || error.Code === 2) && field === 'iban') result = true;
-            if (error.Code === 54 && field === 'sortCode') result = true;
-          })
-          return result;
-        }
-      },
-
-      refreshPage () {
-        if(this.$route.query.userVerifySubmitted === true) {
-          this.userVerifySubmitted = true;
-        }
-
-        if(typeof(this.beneficiaries) === 'undefined') {
-          this.getUserBeneficiaries()
-            .then(resp => {
-              let business = resp.filter((b) => { if(b.type === 'business') {return b} });
-              let individual = resp.filter((b) => { if(b.type === 'personal') {return b} });
-              let all = resp;
-              let arr;
-
-              this.getBeneficiaryErrors(all).then(bennyErrors => {
-                for(var n = 0; n < 3; n++) {
-                  if(n === 0) {
-                    arr = all;
-                  } else if(n === 1) {
-                    arr = business;
-                  } else {
-                    arr = individual;
-                  }
-
-                  this.setListItems(arr, n);
-                }
-              })
-              return this.listItems;
-            })
-        }
-      },
-
-      setListItems (beneficiariesArr, listIndex) {
-        var bennyErr;
-        for(let i = 0; i < beneficiariesArr.length; i++) {
-          bennyErr = this.verificationErrors.find((e) => {
-            return e.beneficiary_id === beneficiariesArr[i].id
-          });
-          if (i === beneficiariesArr.length - 1) {
-            if (beneficiariesArr.length > 0) {
-              this.listItems[listIndex].push(
-                {
-                  title: beneficiariesArr[i].company_name || beneficiariesArr[i].first_name_on_account,
-                  subtitle: `<span class='text--primary'>Type: ${beneficiariesArr[i].type}</span> &mdash; ${beneficiariesArr[i].country}`,
-                  type: beneficiariesArr[i].type,
-                  verified: beneficiariesArr[i].verified,
-                  beneficaryId: beneficiariesArr[i].id,
-                  tooltip: beneficiariesArr[i].verified ? 'Send payment' : this.translateVerificationErrors(bennyErr, beneficiariesArr[i].country)
-                }
-              )
-            }
+          if (resp.data.type === "business") {
+            this.listItems[1].push(item);
           } else {
-            this.listItems[listIndex].push(
-              {
-                title: beneficiariesArr[i].company_name || beneficiariesArr[i].first_name_on_account,
-                subtitle: `<span class='text--primary'>Type: ${beneficiariesArr[i].type}</span> &mdash; ${beneficiariesArr[i].country}`,
-                type: beneficiariesArr[i].type,
-                verified: beneficiariesArr[i].verified,
-                beneficaryId: beneficiariesArr[i].id,
-                tooltip: beneficiariesArr[i].verified ? 'Send payment' : this.translateVerificationErrors(bennyErr, beneficiariesArr[i].country)
-              },
-              { divider: true, inset: true }
-            )
+            this.listItems[2].push(item);
           }
-        }
-      },
+          this.resetFormData();
+        })
+        .catch(error => {
+          console.log("error", error);
+          this.error = true;
+        });
+    },
 
-      decodeToken () {
-        return decode(localStorage.token);
-      },
+    cancelForm() {
+      this.editBeneficiary = false;
+      this.addNewBeneficiary = false;
+      this.updateSuccess = false;
+      this.createSuccess = false;
+      this.resetFormData();
+    },
 
-      setHeaders () {
-        let token = localStorage.token;
-        return { headers: {'token': token } }
-      },
+    //? what is the difference between type and account_type
+    formatData() {
+      return {
+        company_name: this.beneficiary.companyName || "",
+        first_name_on_account: this.beneficiary.firstName || "",
+        last_name_on_account: this.beneficiary.lastName || "",
+        type: this.beneficiary.type || "",
+        account_type: this.beneficiary.type || "",
+        account_number: this.beneficiary.accountNumber || "",
+        routing_number: this.beneficiary.routingNumber || "",
+        country: this.beneficiary.country || "",
+        address1: this.beneficiary.address || "",
+        city: this.beneficiary.city || "",
+        state_province: this.beneficiary.stateProvince || "",
+        postal_code: this.beneficiary.postalCode || "",
+        bsb_number: this.beneficiary.bsb || null,
+        swift_bic: this.beneficiary.swiftBIC || "",
+        currency: this.beneficiaryCurrency || "",
+        clabe: this.beneficiary.clabe || "",
+        bank_name: this.beneficiary.bankName || "",
+        bank_city: this.beneficiary.bankCity || "",
+        bank_state_province: this.beneficiary.bankProvince || "",
+        branch_name: this.beneficiary.branchName || "",
+        bank_code: this.beneficiary.bankCode || "",
+        branch_code: this.beneficiary.branchCode || "",
+        cpfcnpj: this.beneficiary.cpf || this.beneficiary.cnpj || "",
+        email: this.beneficiary.email || "",
+        phone_number: this.beneficiary.phoneNumber || ""
+      };
+    },
 
-      sendMoney (beneficaryId) {
-        this.$router.push(`/rf/payments?sendTo=${beneficaryId}`);
-      },
-
-      getUserBeneficiaries () {
-        let userId = this.decodeToken().userId;
-        return axios.get(`${process.env.API_URL}/users/${userId}/beneficiaries`, this.setHeaders())
-          .then(resp => {
-            let beneficiariesArr = [];
-            this.beneficiaries = resp.data;
-
-            for(var i = 0; i < resp.data.length; i++) {
-              let beneficiary = resp.data[i];
-              beneficiariesArr.push(beneficiary)
-            }
-
-            return beneficiariesArr;
-          })
-          .catch(err => {
-            console.log('error', err)
-          })
-      },
-
-      getBeneficiary (beneficiaryId) {
-        let userId = this.decodeToken().userId;
-        this.error = false;
-        this.loading = true;
-
-        axios.get(`${process.env.API_URL}/users/${userId}/beneficiaries/${beneficiaryId}`, this.setHeaders())
-          .then(resp => {
-            this.beneficiary.id = resp.data.id;
-            this.beneficiary.companyName = resp.data.company_name;
-            this.beneficiary.firstName = resp.data.first_name_on_account;
-            this.beneficiary.lastName = resp.data.last_name_on_account;
-            this.beneficiary.type = resp.data.type;
-            this.beneficiary.accountNumber = resp.data.account_number;
-            this.beneficiary.routingNumber = resp.data.routing_number;
-            this.beneficiary.country = resp.data.country;
-            this.beneficiary.clabe = resp.data.clabe;
-            this.beneficiary.bankName = resp.data.bank_name;
-            this.beneficiary.bankCity = resp.data.bank_city;
-            this.beneficiary.bankProvince = resp.data.bank_state_province;
-            this.beneficiary.branchName = resp.data.branch_name;
-            this.beneficiary.bankCode = resp.data.bank_city;
-            this.beneficiary.branchCode = resp.data.branch_code;
-            this.beneficiary.cpf = resp.data.cpfcnpj;
-            this.beneficiary.cnpj = resp.data.cpfcnpj;
-            this.beneficiary.email = resp.data.email;
-            this.beneficiary.phoneNumber = resp.data.phone_number;
-            this.beneficiary.bsb = resp.data.bsb_number;
-            this.beneficiary.swiftBIC = resp.data.swift_bic;
-            this.beneficiary.address = resp.data.address1;
-            this.beneficiary.stateProvince = resp.data.state_province;
-            this.beneficiary.city = resp.data.city;
-            this.beneficiary.postalCode = resp.data.postal_code;
-            this.editBeneficiary = true;
-            this.loading = false;
-            this.e2 = 1;
-
-            // we run the below checks for the appended icons on the edit form
-            var bennyErr = this.verificationErrors.find((e) => {
-              return e.beneficiary_id === resp.data.id
-            });
-
-            // form errors
-            this.beneficiary.swiftError = this.checkError(bennyErr, 'swift');
-            this.beneficiary.clabeError = this.checkError(bennyErr, 'clabe');
-            this.beneficiary.ibanError = this.checkError(bennyErr, 'iban');
-
-            return;
-          })
-      },
-
-      updateBeneficiary () {
-        let userId = this.decodeToken().userId;
-        let body = this.formatData();
-
-        axios.put(`${process.env.API_URL}/users/${userId}/beneficiaries/${this.beneficiary.id}`, body, this.setHeaders())
-          .then(resp => {
-            this.editBeneficiary = false;
-            this.updateSuccess = true;
-            this.resetFormData();
-          })
-          .catch(err => {
-            console.log('error', err);
-            this.error = true;
-            this.editBeneficiary = false;
-            this.resetFormData();
-          })
-      },
-
-      submitForm () {
-        let userId = this.decodeToken().userId;
-        let body = this.formatData();
-
-        axios.post(`${process.env.API_URL}/users/${userId}/beneficiaries`, body, this.setHeaders())
-          .then((resp) => {
-            this.error = false;
-            this.createSuccess = true;
-            this.addNewBeneficiary = false;
-            this.userVerifySubmitted = false;
-            var item = {
-              avatar: '',
-              title: resp.data.first_name_on_account,
-              subtitle: `<span class='text--primary'>Type: ${resp.data.type}</span> &mdash; ${resp.data.country}`,
-              type: resp.data.type,
-              beneficaryId: resp.data.id,
-              tooltip: 'Awaiting verification'
-            };
-
-            // add to all
-            this.listItems[0].push(item);
-
-            if ( resp.data.type === 'business') {
-              this.listItems[1].push(item);
-            } else {
-              this.listItems[2].push(item);
-            }
-            this.resetFormData();
-          })
-          .catch((error) => {
-            console.log('error', error);
-            this.error = true;
-          });
-      },
-
-      cancelForm () {
-        this.editBeneficiary = false;
-        this.addNewBeneficiary = false;
-        this.updateSuccess = false;
-        this.createSuccess = false;
-        this.resetFormData();
-      },
-
-      //? what is the difference between type and account_type
-      formatData () {
-        return {
-          company_name:             this.beneficiary.companyName || "",
-          first_name_on_account:    this.beneficiary.firstName || "",
-          last_name_on_account:     this.beneficiary.lastName || "",
-          type:                     this.beneficiary.type || "",
-          account_type:             this.beneficiary.type || "",
-          account_number:           this.beneficiary.accountNumber || "",
-          routing_number:           this.beneficiary.routingNumber || "",
-          country:                  this.beneficiary.country || "",
-          address1:                 this.beneficiary.address || "",
-          city:                     this.beneficiary.city || "",
-          state_province:           this.beneficiary.stateProvince || "",
-          postal_code:              this.beneficiary.postalCode || "",
-          bsb_number:               this.beneficiary.bsb || null,
-          swift_bic:                this.beneficiary.swiftBIC || "",
-          currency:                 this.beneficiaryCurrency || "",
-          clabe:                    this.beneficiary.clabe || "",
-          bank_name:                this.beneficiary.bankName || "",
-          bank_city:                this.beneficiary.bankCity || "",
-          bank_state_province:      this.beneficiary.bankProvince || "",
-          branch_name:              this.beneficiary.branchName || "",
-          bank_code:                this.beneficiary.bankCode || "",
-          branch_code:              this.beneficiary.branchCode || "",
-          cpfcnpj:                  this.beneficiary.cpf || this.beneficiary.cnpj || "",
-          email:                    this.beneficiary.email || "",
-          phone_number:             this.beneficiary.phoneNumber || ""
-        }
-      },
-
-      resetFormData () {
-        this.beneficiary.swiftBIC = "";
-        this.beneficiary.address = "";
-        this.beneficiary.city = "";
-        this.beneficiary.companyName = "";
-        this.beneficiary.firstName = "";
-        this.beneficiary.lastName = "";
-        this.beneficiary.type = "";
-        this.beneficiary.type = "";
-        this.beneficiary.accountNumber = "";
-        this.beneficiary.routingNumber = "";
-        this.beneficiary.clabe = "";
-        this.beneficiary.bankName = "";
-        this.beneficiary.bankCity = "";
-        this.beneficiary.bankProvince = "";
-        this.beneficiary.branchName = "";
-        this.beneficiary.bankCode = "";
-        this.beneficiary.branchCode = "";
-        this.beneficiary.cpf = "";
-        this.beneficiary.cnpj = "";
-        this.beneficiary.email = "";
-        this.beneficiary.phoneNumber=  "";
-        this.beneficiary.bsb = "";
-        this.e1 = 0;
-      }
+    resetFormData() {
+      this.beneficiary.swiftBIC = "";
+      this.beneficiary.address = "";
+      this.beneficiary.city = "";
+      this.beneficiary.companyName = "";
+      this.beneficiary.firstName = "";
+      this.beneficiary.lastName = "";
+      this.beneficiary.type = "";
+      this.beneficiary.type = "";
+      this.beneficiary.accountNumber = "";
+      this.beneficiary.routingNumber = "";
+      this.beneficiary.clabe = "";
+      this.beneficiary.bankName = "";
+      this.beneficiary.bankCity = "";
+      this.beneficiary.bankProvince = "";
+      this.beneficiary.branchName = "";
+      this.beneficiary.bankCode = "";
+      this.beneficiary.branchCode = "";
+      this.beneficiary.cpf = "";
+      this.beneficiary.cnpj = "";
+      this.beneficiary.email = "";
+      this.beneficiary.phoneNumber = "";
+      this.beneficiary.bsb = "";
+      this.e1 = 0;
     }
   }
+};
 </script>
 
 <style>
-  @media (min-width: 415px) {
-    .toolytippy {
-      max-width: 160px;
-    }
+@media (min-width: 415px) {
+  .toolytippy {
+    max-width: 160px;
   }
+}
 
-  @media (max-width: 415px) {
-    .mobile-tile-action {
-      margin-left: -25px;
-    }
+@media (max-width: 415px) {
+  .mobile-tile-action {
+    margin-left: -25px;
   }
+}
 
-  .input-group__append-icon:hover {
-    color: red;
-  }
+.input-group__append-icon:hover {
+  color: red;
+}
 
-  .theme--light .input-group:not(.input-group--error):not(.input-group--focused):not(.input-group--disabled) .input-group__input .input-group__append-icon:not(:hover) {
-    color: red;
-  }
+.theme--light .input-group:not(.input-group--error):not(.input-group--focused):not(.input-group--disabled) .input-group__input .input-group__append-icon:not(:hover) {
+  color: red;
+}
 
-  .select-drop-down {
-    color: rgba(0,0,0,.54)!important;
-  }
+.select-drop-down {
+  color: rgba(0, 0, 0, 0.54) !important;
+}
 </style>
 

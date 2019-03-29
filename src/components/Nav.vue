@@ -40,108 +40,112 @@
 </template>
 
 <script>
-  import * as decode from "jwt-decode";
-  import axios from "axios";
+import * as decode from "jwt-decode";
+import axios from "axios";
 
-  export default {
-    data: () => ({
-      avatarSrc: null,
-      drawer: true,
-      routes: null,
-      menuItems: [
-        {
-          title: 'Account Settings',
-          path: 'AccountSettings'
-        },
-        { title: 'Sign Out',
-          path: 'Sign Out'
-        }
-      ]
-    }),
-
-    created () {
-      var tokenData = decode(localStorage.token);
-      this.getRoutes(tokenData);
-      localStorage.avatarSrc === "undefined" || localStorage.avatarSrc === "null" ? this.avatarSrc = null : this.avatarSrc = localStorage.avatarSrc;
-    },
-
-    mounted () {
-      this.$root.$on('verification-submitted', function() {
-        this.getRoutes({verificationSubmitted: true})
-      }.bind(this))
-    },
-
-    methods: {
-      setHeaders () {
-        let token = localStorage.token;
-        return { headers: {'token': token } }
+export default {
+  data: () => ({
+    avatarSrc: null,
+    drawer: true,
+    routes: null,
+    menuItems: [
+      {
+        title: "Account Settings",
+        path: "AccountSettings"
       },
-
-      getRoutes (tokenData) {
-        var tokenData = tokenData || {};
-
-        let routes = [
-          {
-            title: 'Verify Account',
-            path: '/rf/verification',
-            icon: 'verified_user'
-          },
-          {
-            title: 'Home',
-            path: '/rf/dashboard',
-            icon: 'home'
-          },
-          {
-            title: 'Send Money',
-            path: '/rf/payments',
-            icon: 'attach_money'
-          },
-          {
-            title: 'Beneficiaries',
-            path: '/rf/beneficiaries',
-            icon: 'group'
-          },
-          {
-            title: 'Transactions',
-            path: '/rf/transactions',
-            icon: 'receipt'
-          },
-
-          // {
-          //   title: 'Fund Account',
-          //   path: '/rf/fund_account',
-          //   icon: 'account_balance'
-          // },
-          {
-            title: 'Developer',
-            path: '/rf/developer',
-            icon: 'code'
-          }
-        ]
-
-        if (tokenData.verificationSubmitted || localStorage.submitted) {
-          routes.shift();
-        }
-
-        return this.routes = routes;
-      },
-
-      removeVerificationFromNav () {
-        this.routes.shift();
+      {
+        title: "Sign Out",
+        path: "Sign Out"
       }
+    ]
+  }),
+
+  created() {
+    var tokenData = decode(localStorage.token);
+    this.getRoutes(tokenData);
+    localStorage.avatarSrc === "undefined" || localStorage.avatarSrc === "null" ? (this.avatarSrc = null) : (this.avatarSrc = localStorage.avatarSrc);
+  },
+
+  mounted() {
+    this.$root.$on(
+      "verification-submitted",
+      function() {
+        this.getRoutes({ verificationSubmitted: true });
+      }.bind(this)
+    );
+  },
+
+  methods: {
+    setHeaders() {
+      let token = localStorage.token;
+      return { headers: { token: token } };
+    },
+
+    getRoutes(tokenData) {
+      var tokenData = tokenData || {};
+
+      let routes = [
+        {
+          title: "Verify Account",
+          path: "/rf/verification",
+          icon: "verified_user"
+        },
+        {
+          title: "Home",
+          path: "/rf/dashboard",
+          icon: "home"
+        },
+        {
+          title: "Send Money",
+          path: "/rf/payments",
+          icon: "attach_money"
+        },
+        {
+          title: "Beneficiaries",
+          path: "/rf/beneficiaries",
+          icon: "group"
+        },
+        {
+          title: "Transactions",
+          path: "/rf/transactions",
+          icon: "receipt"
+        },
+
+        // {
+        //   title: 'Fund Account',
+        //   path: '/rf/fund_account',
+        //   icon: 'account_balance'
+        // },
+        {
+          title: "Developer",
+          path: "/rf/developer",
+          icon: "code"
+        }
+      ];
+
+      if (tokenData.verificationSubmitted || localStorage.submitted) {
+        routes.shift();
+      }
+
+      return (this.routes = routes);
+    },
+
+    removeVerificationFromNav() {
+      this.routes.shift();
     }
   }
+};
 </script>
 <style>
-  @media screen and (min-width: 415px) {
-    .mobile {
-      display: none;
-    }
+@media screen and (min-width: 415px) {
+  .mobile {
+    display: none;
   }
+}
 
-  @media screen and (max-width: 415px) {
-    .desktop {
-      display: none;
-    }
+@media screen and (max-width: 415px) {
+  .desktop {
+    display: none;
   }
+}
 </style>

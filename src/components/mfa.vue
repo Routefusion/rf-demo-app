@@ -45,127 +45,133 @@
 </template>
 
 <script>
-  import Footer from "./Footer";
-  import axios from "axios";
-  import * as decode from 'jwt-decode';
-  import SessionModal from './SessionModal';
+import Footer from "./Footer";
+import axios from "axios";
+import * as decode from "jwt-decode";
 
-  export default {
-    data () {
-      return {
-        success: false,
-        error: false,
-        disableGenerate: false,
-        qrCode: null,
-        authCode: null,
-        verified: false,
-        valid: null
-      }
+export default {
+  data() {
+    return {
+      success: false,
+      error: false,
+      disableGenerate: false,
+      qrCode: null,
+      authCode: null,
+      verified: false,
+      valid: null
+    };
+  },
+  components: {
+    "app-footer": Footer
+  },
+  methods: {
+    setHeaders() {
+      let token = localStorage.token;
+      return { headers: { token: token } };
     },
-    components: {
-      'app-footer': Footer
+
+    abracadabra() {
+      var id = decode(localStorage.token).userId;
+      var self = this;
+      axios
+        .get(`${process.env.API_URL}/users/${id}/mfa/generate`, this.setHeaders())
+        .then(function(resp) {
+          self.qrCode = resp.data;
+          self.disableGenerate = true;
+          return;
+        })
+        .catch(function(err) {
+          console.log(err);
+        });
     },
-    methods: {
-      setHeaders () {
-        let token = localStorage.token;
-        return { headers: {'token': token } }
-      },
 
-      abracadabra () {
-        var id = decode(localStorage.token).userId;
-        var self = this;
-        axios.get(`${process.env.API_URL}/users/${id}/mfa/generate`, this.setHeaders())
-          .then(function(resp) {
-            self.qrCode = resp.data;
-            self.disableGenerate = true;
-            return;
-          })
-          .catch(function(err) {
-            console.log(err);
-          })
-      },
-
-      alacazam () {
-        var id = decode(localStorage.token).userId;
-        var self = this;
-        axios.post(`${process.env.API_URL}/users/${id}/mfa/verify`, {token: this.authCode}, this.setHeaders())
-          .then(function(resp) {
-            if (resp.data.verified) {
-              self.verified = true;
-              self.success = true;
-              setTimeout(function() {
-                self.$router.push('dashboard');
-              }.bind(self), 3000);
-            }
-
-            if (!resp.data.verified) {
-              self.error = true;
-            }
-
-            return;
-          })
-          .catch(function(err) {
-            console.log(err);
-          })
-      },
-
-      validateForm () {
-        if (this.password.length < 6) {
-          this.formError = true;
-          this.errorMessage = "Password must be at least 6 characters long";
-          setTimeout(() => this.formError = false, 10000);
-          return false;
-        } else if (this.password !== this.passwordConfirmation) {
-          this.formError = true;
-          this.errorMessage = "Password must much password confirmation";
-          setTimeout(() => this.formError = false, 10000);
-          return false;
-        } else {
-          return true;
-        }
-      },
-
-      submitForm () {
-        this.valid = !this.valid;
-        if (this.validateForm()) {
-          var body = {
-            email: this.email,
-            password: this.password
+    alacazam() {
+      var id = decode(localStorage.token).userId;
+      var self = this;
+      axios
+        .post(`${process.env.API_URL}/users/${id}/mfa/verify`, { token: this.authCode }, this.setHeaders())
+        .then(function(resp) {
+          if (resp.data.verified) {
+            self.verified = true;
+            self.success = true;
+            setTimeout(
+              function() {
+                self.$router.push("dashboard");
+              }.bind(self),
+              3000
+            );
           }
 
-          var resetToken = this.$route.params.token;
+          if (!resp.data.verified) {
+            self.error = true;
+          }
 
-          return axios.put(`${process.env.API_URL}/reset/${resetToken}`, body)
-            .then((resp) => {
-              this.passwordReset = true;
-              this.$router.push('/sign_in?passwordReset=true')
-            })
-            .catch((err) => {
-              this.formError = true;
-              this.errorMessage = "There was an error reseting your password. Please contact engineering@routefusion.co if this issue continues."
-              setTimeout(() => this.formError = false, 10000);
-              this.valid = !this.valid;
-            })
-        }
-      },
+          return;
+        })
+        .catch(function(err) {
+          console.log(err);
+        });
+    },
 
-      backToSignIn () {
-        this.$router.push('/sign_in');
+    validateForm() {
+      if (this.password.length < 6) {
+        this.formError = true;
+        this.errorMessage = "Password must be at least 6 characters long";
+        setTimeout(() => (this.formError = false), 10000);
+        return false;
+      } else if (this.password !== this.passwordConfirmation) {
+        this.formError = true;
+        this.errorMessage = "Password must much password confirmation";
+        setTimeout(() => (this.formError = false), 10000);
+        return false;
+      } else {
+        return true;
       }
     },
 
-    created () {
-      var resetToken = this.$route.params.token;
+    submitForm() {
+      this.valid = !this.valid;
+      if (this.validateForm()) {
+        var body = {
+          email: this.email,
+          password: this.password
+        };
 
-      return axios.get(`${process.env.API_URL}/reset/${resetToken}`)
-        .then((resp) => {
-          this.email = resp.data.email;
-        })
-        .catch((err) => {
-          this.formError = true;
-          this.errorMessage = "Password reset token invalid, please request a new token"
-          setTimeout(() => this.formError = false, 10000);
-        })
+        var resetToken = this.$route.params.token;
+
+        return axios
+          .put(`${process.env.API_URL}/reset/${resetToken}`, body)
+          .then(resp => {
+            this.passwordReset = true;
+            this.$router.push("/sign_in?passwordReset=true");
+          })
+          .catch(err => {
+            this.formError = true;
+            this.errorMessage = "There was an error reseting your password. Please contact engineering@routefusion.co if this issue continues.";
+            setTimeout(() => (this.formError = false), 10000);
+            this.valid = !this.valid;
+          });
+      }
+    },
+
+    backToSignIn() {
+      this.$router.push("/sign_in");
     }
+  },
+
+  created() {
+    var resetToken = this.$route.params.token;
+
+    return axios
+      .get(`${process.env.API_URL}/reset/${resetToken}`)
+      .then(resp => {
+        this.email = resp.data.email;
+      })
+      .catch(err => {
+        this.formError = true;
+        this.errorMessage = "Password reset token invalid, please request a new token";
+        setTimeout(() => (this.formError = false), 10000);
+      });
   }
+};
 </script>

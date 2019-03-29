@@ -1,6 +1,5 @@
 <template>
   <v-content>
-    <session-modal @stop-that-fool="loading = false"></session-modal>
     <v-container fluid>
       <v-layout row>
         <v-flex>
@@ -907,131 +906,126 @@
 </template>
 
 <script>
-  import SessionModal from './SessionModal';
-  import * as decode from "jwt-decode";
-  import axios from 'axios';
-  import * as countries from '../lib/countries';
+import * as decode from "jwt-decode";
+import axios from "axios";
+import * as countries from "../lib/countries";
 
-  export default {
-    data () {
-      return {
-        clickedSubmit: false,
-        success: false,
-        error: false,
-        menu: false,
-        e1: 0,
-        addNewAccount: false,
-        valid: false,
-        rules: {
-          name: [],
-          incorporationNumberUS: [],
-          purposeOfPayment: [],
-          paymentFrequency: [],
-          paymentVolume: []
-        },
-        countries: countries,
-        businessTypes: [
-          {name: "S Corporation", value: 'corpS'},
-          {name: "C Corporation", value: 'corpC'},
-          {name: "Partnership (LP, LLP, LLLP)", value: 'partnership'},
-          {name: "Limited Liability Company", value: 'llc'},
-          {name: "Sole Proprietorship", value: 'soleP'},
-          {name: "Government Entity", value: 'gov'},
-          {name: "Publicly Traded Company", value: 'public'},
-          {name: "Non Profit", value: 'nonProfit'},
-          {name: "Trust", value: 'trust'}
-        ],
-        identificationTypes: [
-          {name: "Drivers License", value: "dl"},
-          {name: "Passport", value: "passport"},
-          {name: "Social Security Number", value: "ssn"}
-        ],
+export default {
+  data() {
+    return {
+      clickedSubmit: false,
+      success: false,
+      error: false,
+      menu: false,
+      e1: 0,
+      addNewAccount: false,
+      valid: false,
+      rules: {
+        name: [],
+        incorporationNumberUS: [],
+        purposeOfPayment: [],
+        paymentFrequency: [],
+        paymentVolume: []
+      },
+      countries: countries,
+      businessTypes: [
+        { name: "S Corporation", value: "corpS" },
+        { name: "C Corporation", value: "corpC" },
+        { name: "Partnership (LP, LLP, LLLP)", value: "partnership" },
+        { name: "Limited Liability Company", value: "llc" },
+        { name: "Sole Proprietorship", value: "soleP" },
+        { name: "Government Entity", value: "gov" },
+        { name: "Publicly Traded Company", value: "public" },
+        { name: "Non Profit", value: "nonProfit" },
+        { name: "Trust", value: "trust" }
+      ],
+      identificationTypes: [{ name: "Drivers License", value: "dl" }, { name: "Passport", value: "passport" }, { name: "Social Security Number", value: "ssn" }],
+      officers: [{}],
+      owners: [],
+      client: {
+        country: "US",
         officers: [{}],
         owners: [],
-        client: {
-          country: 'US',
-          officers: [{}],
-          owners: [],
-          payments: {},
-          account: {}
-        }
+        payments: {},
+        account: {}
       }
+    };
+  },
+
+  created() {},
+
+  methods: {
+    decodeToken() {
+      return decode(localStorage.token);
     },
 
-    created () {
-
+    setHeaders() {
+      let token = localStorage.token;
+      return { headers: { token: token } };
     },
 
-    methods: {
-      decodeToken () {
-        return decode(localStorage.token);
-      },
+    submitForm() {
+      var body = { KYC: this.client };
+      var userId = this.decodeToken().userId;
+      var self = this;
 
-      setHeaders () {
-        let token = localStorage.token;
-        return { headers: {'token': token } }
-      },
-
-      submitForm () {
-        var body = {'KYC': this.client};
-        var userId = this.decodeToken().userId;
-        var self = this;
-
-        axios.post(`${process.env.API_URL}/users/${userId}/verify`, body, this.setHeaders())
-          .then(function (response) {
-            self.success = true;
-            self.clickedSubmit = true;
-            self.$root.$emit('verification-submitted');
-            localStorage.submitted = true;
-            setTimeout(function() {
+      axios
+        .post(`${process.env.API_URL}/users/${userId}/verify`, body, this.setHeaders())
+        .then(function(response) {
+          self.success = true;
+          self.clickedSubmit = true;
+          self.$root.$emit("verification-submitted");
+          localStorage.submitted = true;
+          setTimeout(
+            function() {
               self.$router.push(`/rf/dashboard`);
-            }.bind(self), 5000);
+            }.bind(self),
+            5000
+          );
 
-            return;
-          })
-          .catch(function(error) {
-            console.log('error', error);
-            self.error = true;
-          });
-      },
-
-      clearForm () {
-        this.client = {
-          officers: [{}],
-          owners: [],
-          payments: {
-            countries: []
-          },
-          account: {}
-        };
-
-        return this.e1 = 1;
-      },
-
-      getCountry (abbr) {
-        var selection = this.countries.find(function(element) {
-          return element.countryAbbr === abbr
+          return;
         })
-
-        return selection.name;
-      },
-
-      getStructureName (data) {
-        var selection = this.businessTypes.find(function(element) {
-          return element.value === data;
-        })
-
-        return selection.name;
-      }
+        .catch(function(error) {
+          console.log("error", error);
+          self.error = true;
+        });
     },
 
-    components: {
-      'session-modal': SessionModal
+    clearForm() {
+      this.client = {
+        officers: [{}],
+        owners: [],
+        payments: {
+          countries: []
+        },
+        account: {}
+      };
+
+      return (this.e1 = 1);
+    },
+
+    getCountry(abbr) {
+      var selection = this.countries.find(function(element) {
+        return element.countryAbbr === abbr;
+      });
+
+      return selection.name;
+    },
+
+    getStructureName(data) {
+      var selection = this.businessTypes.find(function(element) {
+        return element.value === data;
+      });
+
+      return selection.name;
     }
-  }
+  },
+
+  components: {}
+};
 </script>
 <style>
-  .input-group-text-field {
-    color: #79589f !important
-  }
+.input-group-text-field {
+  color: #79589f !important;
+}
 </style>

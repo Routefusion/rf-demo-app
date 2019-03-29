@@ -144,89 +144,89 @@
 </template>
 
 <script>
-  import Footer from "./Footer";
-  import auth from "../router/auth";
+import Footer from "./Footer";
+import auth from "../router/auth";
 
-  export default {
-    data () {
-      return {
-        loggedIn: auth.loggedIn(),
-        styles: {
-          PGPheader: {
-            fontSize: '8vh',
-            fontWeight: 400,
-            lineHeight: '1.35 !important',
-            letterSpacing: '-.02em !important'
-          },
+export default {
+  data() {
+    return {
+      loggedIn: auth.loggedIn(),
+      styles: {
+        PGPheader: {
+          fontSize: "8vh",
+          fontWeight: 400,
+          lineHeight: "1.35 !important",
+          letterSpacing: "-.02em !important"
+        },
 
-          navLogo: {
-            height: '40vw',
-            width: 'auto',
-            background: 'black',
-            fill: 'black'
-          },
+        navLogo: {
+          height: "40vw",
+          width: "auto",
+          background: "black",
+          fill: "black"
+        },
 
-          footerContact: {
-            color: '#7171da',
-            fontWeight: 200,
-            float: 'right',
-            display: 'inline-block',
-            marginBottom: 'unset',
-            position: 'absolute',
-            right: 0,
-            bottom: '30%',
-            textAlign: 'right'
-          },
+        footerContact: {
+          color: "#7171da",
+          fontWeight: 200,
+          float: "right",
+          display: "inline-block",
+          marginBottom: "unset",
+          position: "absolute",
+          right: 0,
+          bottom: "30%",
+          textAlign: "right"
         }
       }
-    },
+    };
+  },
 
-    components: {
-      'footer-meow': Footer
-    },
+  components: {
+    "footer-meow": Footer
+  },
 
-    created() {
-      auth.onChange = loggedIn => {
-        this.loggedIn = loggedIn
-      }
-    }
+  created() {
+    auth.onChange = loggedIn => {
+      this.loggedIn = loggedIn;
+    };
   }
+};
 </script>
 
 <style>
+.dot-menu {
+  display: inline-block !important;
+  color: #7171da;
+}
+
+.nav-btn {
+  display: none !important;
+}
+
+.subheading {
+  font-weight: 500 !important;
+}
+
+.sign-in-btn {
+  color: #7171da !important;
+}
+
+@media (max-width: 415px) {
+  .sign-in-btn {
+    color: #7171da;
+    margin-right: unset !important;
+    padding-left: 6px;
+  }
+}
+
+@media (min-width: 415px) {
   .dot-menu {
-    display: inline-block!important;
-    color: #7171da
+    display: none !important;
   }
 
   .nav-btn {
-    display: none!important;
+    display: inline-block !important;
+    color: #7171da !important;
   }
-
-  .subheading {
-    font-weight: 500!important;
-  }
-
-  .sign-in-btn {
-    color: #7171da!important;
-  }
-
-  @media (max-width: 415px) {
-    .sign-in-btn {
-      color: #7171da;
-      margin-right: unset!important;
-      padding-left: 6px;
-    }
-  }
-
-  @media (min-width: 415px) {
-    .dot-menu {
-      display: none!important;
-    }
-
-    .nav-btn {
-      display: inline-block!important;
-      color: #7171da!important;
-    }
-  }
+}
 </style>

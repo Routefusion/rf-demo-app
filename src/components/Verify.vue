@@ -2,7 +2,6 @@
   <v-app>
     <spin-baby-spin v-if="loading"></spin-baby-spin>
     <v-content>
-    <session-modal @stop-that-fool="refreshPage()"></session-modal>
       <v-alert type="error" :value="noBankStatement">No bank statemnt provided</v-alert>
       <v-alert type="error" :value="noPassport">No passport provided</v-alert>
 
@@ -262,251 +261,267 @@
 </template>
 
 <script>
-  import Spinner from './Spinner';
-  import SessionModal from './SessionModal';
-  import axios from 'axios';
-  import fetch from 'node-fetch';
-  import * as decode from 'jwt-decode';
+import Spinner from "./Spinner";
+import axios from "axios";
+import fetch from "node-fetch";
+import * as decode from "jwt-decode";
 
-  export default {
-    data () {
-      return {
-        submitDis: false,
-        loading: true,
-        userVerifySubmitted: null,
-        account: {
-          default_currency: 'USD'
-        },
-        user: {},
-        menu: false,
-        valid: false,
-        loading: true,
-        e6: 1,
-        e1: null,
-        bankStatement: '',
-        passport: '',
-        noBankStatement: null,
-        noPassport: null,
-        rules: {
-          DOB: [
-            v => !!v || 'Must provide date of birth'
-          ],
-          street: [
-            v => !!v || 'Must provide a street address'
-          ],
-          city: [
-            v => !!v || 'Must provide city'
-          ],
-          state: [
-            v => !!v || 'State is required'
-          ],
-          zipcode: [
-            v => !!v || 'Zip code is required',
-            v => (v && v.length === 5) || 'Zip code must have 5 numbers'
-          ],
-          name: [
-            v => !!v || 'Name is required',
-            v => (v && v.length <= 20) || 'Name must be less than 20 characters'
-          ],
-          email: [
-            v => !!v || 'E-mail is required',
-            v => /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v) || 'E-mail must be valid'
-          ],
-          accountNum: [
-            v => !!v || 'Must provide account number',
-            v =>  !/[a-zA-Z]/.test(v) || 'Must contain only numbers'
-          ],
-          routingNum: [
-            v => !!v || 'Must provide routing number',
-            v =>  !/[a-zA-Z]/.test(v) || 'Must contain only numbers'
-          ]
-        },
-
-        states: [
-          'Alabama', 'Alaska', 'Arizona',
-          'Arkansas', 'California', 'Colorado', 'Connecticut',
-          'Delaware', 'District of Columbia',
-          'Florida', 'Georgia', 'Hawaii', 'Idaho',
-          'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky',
-          'Louisiana', 'Maine', 'Marshall Islands', 'Maryland',
-          'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi',
-          'Missouri', 'Montana', 'Nebraska', 'Nevada',
-          'New Hampshire', 'New Jersey', 'New Mexico', 'New York',
-          'North Carolina', 'North Dakota', 'Northern Mariana Islands', 'Ohio',
-          'Oklahoma', 'Oregon', 'Palau', 'Pennsylvania', 'Puerto Rico',
-          'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee',
-          'Texas', 'Utah', 'Vermont', 'Virgin Island', 'Virginia',
-          'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
-        ]
-      }
-    },
-
-    components: {
-      'spin-baby-spin': Spinner,
-      'session-modal': SessionModal
-    },
-
-    watch: {
-      menu (val) {
-        val && this.$nextTick(() => (this.$refs.picker.activePicker = 'YEAR'))
-      }
-    },
-
-    methods: {
-      refreshPage() {
-        this.getUser()
-        .then(user => {
-          this.userData = user.data;
-          this.submitDis = false;
-          // pre populate fields from user
-          this.user.firstName = this.userData.first_name;
-          this.user.lastName = this.userData.last_name;
-
-          this.userVerifySubmitted = user.data.verification_submitted;
-          this.loading = false
-          this.rules.zipcode = [
-            v => !!v || 'Zip code is required',
-            v => v.length === 5 || 'Zip code must have 5 numbers'
-          ]
-          this.rules.name = [
-            v => !!v || 'Name is required',
-            v => (v && v.length <= 20) || 'Name must be less than 20 characters'
-          ]
-        }, error => {
-          console.log('error loading page', error);
-        })
+export default {
+  data() {
+    return {
+      submitDis: false,
+      loading: true,
+      userVerifySubmitted: null,
+      account: {
+        default_currency: "USD"
+      },
+      user: {},
+      menu: false,
+      valid: false,
+      loading: true,
+      e6: 1,
+      e1: null,
+      bankStatement: "",
+      passport: "",
+      noBankStatement: null,
+      noPassport: null,
+      rules: {
+        DOB: [v => !!v || "Must provide date of birth"],
+        street: [v => !!v || "Must provide a street address"],
+        city: [v => !!v || "Must provide city"],
+        state: [v => !!v || "State is required"],
+        zipcode: [v => !!v || "Zip code is required", v => (v && v.length === 5) || "Zip code must have 5 numbers"],
+        name: [v => !!v || "Name is required", v => (v && v.length <= 20) || "Name must be less than 20 characters"],
+        email: [v => !!v || "E-mail is required", v => /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v) || "E-mail must be valid"],
+        accountNum: [v => !!v || "Must provide account number", v => !/[a-zA-Z]/.test(v) || "Must contain only numbers"],
+        routingNum: [v => !!v || "Must provide routing number", v => !/[a-zA-Z]/.test(v) || "Must contain only numbers"]
       },
 
-      // validate step and continue if valid
-      stepToNext (form, formNum) {
-        if (this.$refs[form].validate()) {
-          this.e6 = formNum + 1;
-        }
-      },
+      states: [
+        "Alabama",
+        "Alaska",
+        "Arizona",
+        "Arkansas",
+        "California",
+        "Colorado",
+        "Connecticut",
+        "Delaware",
+        "District of Columbia",
+        "Florida",
+        "Georgia",
+        "Hawaii",
+        "Idaho",
+        "Illinois",
+        "Indiana",
+        "Iowa",
+        "Kansas",
+        "Kentucky",
+        "Louisiana",
+        "Maine",
+        "Marshall Islands",
+        "Maryland",
+        "Massachusetts",
+        "Michigan",
+        "Minnesota",
+        "Mississippi",
+        "Missouri",
+        "Montana",
+        "Nebraska",
+        "Nevada",
+        "New Hampshire",
+        "New Jersey",
+        "New Mexico",
+        "New York",
+        "North Carolina",
+        "North Dakota",
+        "Northern Mariana Islands",
+        "Ohio",
+        "Oklahoma",
+        "Oregon",
+        "Palau",
+        "Pennsylvania",
+        "Puerto Rico",
+        "Rhode Island",
+        "South Carolina",
+        "South Dakota",
+        "Tennessee",
+        "Texas",
+        "Utah",
+        "Vermont",
+        "Virgin Island",
+        "Virginia",
+        "Washington",
+        "West Virginia",
+        "Wisconsin",
+        "Wyoming"
+      ]
+    };
+  },
 
-      save: function (date) {
-       this.$refs.menu.save(date)
-      },
+  components: {
+    "spin-baby-spin": Spinner
+  },
 
-      bankStatementUpload: function () {
-        this.bankStatement = this.$refs.bankStatement.files[0];
-
-        var preview = document.querySelector('.bankstatment-img');
-        var file    = this.$refs.bankStatement.files[0];
-        var reader  = new FileReader();
-
-        reader.addEventListener("load", function () {
-          preview.src = reader.result;
-        }, false);
-
-        if (file) {
-          reader.readAsDataURL(file);
-        }
-      },
-
-      passportUpload: function () {
-        this.passport = this.$refs.passport.files[0];
-
-        var preview = document.querySelector('.passport-img');
-        var file    = this.passport;
-        var reader  = new FileReader();
-
-        reader.addEventListener("load", function () {
-          preview.src = reader.result;
-        }, false);
-
-        if (file) {
-          reader.readAsDataURL(file);
-        }
-      },
-
-      setHeaders () {
-        let token = localStorage.token;
-        return { headers: {'token': token } }
-      },
-
-      getUser: function () {
-        let userId = this.decodeToken().userId;
-        return axios.get(`${process.env.API_URL}/users/${userId}`, this.setHeaders())
-      },
-
-      decodeToken () {
-        return decode(localStorage.token);
-      },
-
-      sendToBeneficiaries () {
-        this.$router.push('beneficiaries')
-      },
-
-      submit: function () {
-        let formData = new FormData();
-        this.submitDis = true;
-
-        if (this.bankStatement !== '') {
-          formData.append('bankstatement', this.bankStatement);
-          this.noBankStatement = false;
-        } else {
-          // return alert value to prevent network call
-          this.submitDis = false;
-          return this.noBankStatement = true;
-        }
-
-        if (this.passport !== '') {
-          formData.append('passport', this.passport);
-          this.noPassport = false;
-        } else {
-          // return alert value to prevent network call
-          this.submitDis = false;
-          return this.noPassport = true;
-        }
-
-        for (let property in this.account) {
-          formData.append(property, this.account[property])
-        }
-
-        for (let property in this.user) {
-          formData.append(property, this.user[property])
-        }
-
-        let token = localStorage.token;
-        let userId = this.decodeToken().userId;
-
-        fetch(`${process.env.API_URL}/users/${userId}/verify`, { method: 'PUT', body: formData, headers: {'token': token} })
-          .then((response) => {
-            if (response.ok == true) {
-              this.$router.push({ path: 'beneficiaries', query: { userVerifySubmitted: true }})
-            }
-          })
-          .catch(error => {
-            this.submitDis = false;
-            console.log(error);
-          });
-      }
-    },
-
-    created () {
-      this.getUser()
-        .then(user => {
-          this.userData = user.data;
-          this.submitDis = false;
-          // pre populate fields from user
-          this.user.firstName = this.userData.first_name;
-          this.user.lastName = this.userData.last_name;
-
-          this.userVerifySubmitted = user.data.verification_submitted;
-          this.loading = false
-          this.rules.zipcode = [
-            v => !!v || 'Zip code is required',
-            v => v.length === 5 || 'Zip code must have 5 numbers'
-          ]
-          this.rules.name = [
-            v => !!v || 'Name is required',
-            v => (v && v.length <= 20) || 'Name must be less than 20 characters'
-          ]
-        }, error => {
-          console.log('error loading page', error);
-        })
+  watch: {
+    menu(val) {
+      val && this.$nextTick(() => (this.$refs.picker.activePicker = "YEAR"));
     }
+  },
 
+  methods: {
+    refreshPage() {
+      this.getUser().then(
+        user => {
+          this.userData = user.data;
+          this.submitDis = false;
+          // pre populate fields from user
+          this.user.firstName = this.userData.first_name;
+          this.user.lastName = this.userData.last_name;
+
+          this.userVerifySubmitted = user.data.verification_submitted;
+          this.loading = false;
+          this.rules.zipcode = [v => !!v || "Zip code is required", v => v.length === 5 || "Zip code must have 5 numbers"];
+          this.rules.name = [v => !!v || "Name is required", v => (v && v.length <= 20) || "Name must be less than 20 characters"];
+        },
+        error => {
+          console.log("error loading page", error);
+        }
+      );
+    },
+
+    // validate step and continue if valid
+    stepToNext(form, formNum) {
+      if (this.$refs[form].validate()) {
+        this.e6 = formNum + 1;
+      }
+    },
+
+    save: function(date) {
+      this.$refs.menu.save(date);
+    },
+
+    bankStatementUpload: function() {
+      this.bankStatement = this.$refs.bankStatement.files[0];
+
+      var preview = document.querySelector(".bankstatment-img");
+      var file = this.$refs.bankStatement.files[0];
+      var reader = new FileReader();
+
+      reader.addEventListener(
+        "load",
+        function() {
+          preview.src = reader.result;
+        },
+        false
+      );
+
+      if (file) {
+        reader.readAsDataURL(file);
+      }
+    },
+
+    passportUpload: function() {
+      this.passport = this.$refs.passport.files[0];
+
+      var preview = document.querySelector(".passport-img");
+      var file = this.passport;
+      var reader = new FileReader();
+
+      reader.addEventListener(
+        "load",
+        function() {
+          preview.src = reader.result;
+        },
+        false
+      );
+
+      if (file) {
+        reader.readAsDataURL(file);
+      }
+    },
+
+    setHeaders() {
+      let token = localStorage.token;
+      return { headers: { token: token } };
+    },
+
+    getUser: function() {
+      let userId = this.decodeToken().userId;
+      return axios.get(`${process.env.API_URL}/users/${userId}`, this.setHeaders());
+    },
+
+    decodeToken() {
+      return decode(localStorage.token);
+    },
+
+    sendToBeneficiaries() {
+      this.$router.push("beneficiaries");
+    },
+
+    submit: function() {
+      let formData = new FormData();
+      this.submitDis = true;
+
+      if (this.bankStatement !== "") {
+        formData.append("bankstatement", this.bankStatement);
+        this.noBankStatement = false;
+      } else {
+        // return alert value to prevent network call
+        this.submitDis = false;
+        return (this.noBankStatement = true);
+      }
+
+      if (this.passport !== "") {
+        formData.append("passport", this.passport);
+        this.noPassport = false;
+      } else {
+        // return alert value to prevent network call
+        this.submitDis = false;
+        return (this.noPassport = true);
+      }
+
+      for (let property in this.account) {
+        formData.append(property, this.account[property]);
+      }
+
+      for (let property in this.user) {
+        formData.append(property, this.user[property]);
+      }
+
+      let token = localStorage.token;
+      let userId = this.decodeToken().userId;
+
+      fetch(`${process.env.API_URL}/users/${userId}/verify`, { method: "PUT", body: formData, headers: { token: token } })
+        .then(response => {
+          if (response.ok == true) {
+            this.$router.push({ path: "beneficiaries", query: { userVerifySubmitted: true } });
+          }
+        })
+        .catch(error => {
+          this.submitDis = false;
+          console.log(error);
+        });
+    }
+  },
+
+  created() {
+    this.getUser().then(
+      user => {
+        this.userData = user.data;
+        this.submitDis = false;
+        // pre populate fields from user
+        this.user.firstName = this.userData.first_name;
+        this.user.lastName = this.userData.last_name;
+
+        this.userVerifySubmitted = user.data.verification_submitted;
+        this.loading = false;
+        this.rules.zipcode = [v => !!v || "Zip code is required", v => v.length === 5 || "Zip code must have 5 numbers"];
+        this.rules.name = [v => !!v || "Name is required", v => (v && v.length <= 20) || "Name must be less than 20 characters"];
+      },
+      error => {
+        console.log("error loading page", error);
+      }
+    );
   }
+};
 </script>
