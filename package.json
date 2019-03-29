@@ -18,6 +18,7 @@
     "moment": "^2.23.0",
     "node-fetch": "^2.1.2",
     "numeral": "^2.0.6",
+    "routefusion-sdk": "^2.5.1",
     "vue": "^2.5.2",
     "vue-axios": "^2.1.1",
     "vue-flag-icon": "^1.0.6",
