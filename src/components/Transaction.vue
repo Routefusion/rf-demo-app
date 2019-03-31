@@ -49,9 +49,8 @@
 </template>
 
 <script>
+import * as rf from "../utils/sdk";
 import Spinner from "./Spinner.vue";
-import axios from "axios";
-import * as decode from "jwt-decode";
 import * as moment from "moment";
 
 export default {
@@ -60,62 +59,50 @@ export default {
   },
 
   methods: {
-    decodeToken() {
-      return decode(localStorage.token);
-    },
-
-    setHeaders: function() {
-      let token = localStorage.token;
-      return { headers: { token: token } };
-    },
-
     getData: function() {
-      // we set self to this becasue we use the spread callback and we cannot access the vue this inside of it
-      let self = this;
-      let userId = this.decodeToken().userId;
-      let getTransactions = axios.get(`${process.env.API_URL}/users/${userId}/transactions/`, this.setHeaders());
-      let getBeneficiaries = axios.get(`${process.env.API_URL}/users/${userId}/beneficiaries`, this.setHeaders());
-      axios
-        .all([getTransactions, getBeneficiaries])
-        .then(
-          axios.spread((transactions, beneficiaries) => {
-            self.items = [];
+      rf
+        .getBen()
+        .then(benArr => {
+          rf
+            .getTransfer()
+            .then(transactionArr => {
+              this.items = [];
 
-            if (transactions.data.length === 0) {
-              self.noData = true;
-            }
-
-            transactions.data.forEach(transaction => {
-              let fullBenName = "";
-              let transactionDate = new Date(transaction.created_at);
-              transactionDate = moment(transactionDate)
-                .utc()
-                .format("YYYY-MM-DD HH:mm:ss");
-
-              if (beneficiaries.data.find(benny => benny.id === transaction.beneficiary_id)) {
-                fullBenName = `${beneficiaries.data.find(benny => benny.id === transaction.beneficiary_id).first_name_on_account} ${
-                  beneficiaries.data.find(benny => benny.id === transaction.beneficiary_id).last_name_on_account
-                }`;
+              if (transactionArr.length === 0) {
+                this.noData = true;
               }
+              transactionArr.forEach(transaction => {
+                let fullBenName = "";
+                let transactionDate = new Date(transaction.created_at);
+                transactionDate = moment(transactionDate)
+                  .utc()
+                  .format("YYYY-MM-DD HH:mm:ss");
 
-              self.items.push({
-                id: transaction.uuid,
-                beneficiary: fullBenName,
-                exchange_rate: transaction.exchange_rate,
-                currency_pairs: transaction.currency_pairs,
-                source_currency: transaction.source_currency,
-                source_amount: transaction.source_amount,
-                destination_currency: transaction.destination_currency,
-                destination_amount: transaction.destination_amount,
-                state: transaction.state,
-                created_at: transactionDate + " UTC"
+                let benny = benArr.find(benny => benny.id === transaction.beneficiary_id);
+
+                if (benny.id === transaction.beneficiary_id) {
+                  fullBenName = `${benny.first_name_on_account} ${benny.last_name_on_account}`;
+                }
+                this.items.push({
+                  id: transaction.uuid,
+                  beneficiary: fullBenName,
+                  exchange_rate: transaction.exchange_rate,
+                  currency_pairs: transaction.currency_pairs,
+                  source_currency: transaction.source_currency,
+                  source_amount: transaction.source_amount,
+                  destination_currency: transaction.destination_currency,
+                  destination_amount: transaction.destination_amount,
+                  state: transaction.state,
+                  created_at: transactionDate + " UTC"
+                });
               });
+            })
+            .catch(err => {
+              self.noData = true;
             });
-          })
-        )
+        })
         .catch(err => {
           self.noData = true;
-          console.log(err);
         });
     }
   },
