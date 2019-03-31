@@ -20,7 +20,7 @@
 
     <v-toolbar style="border-bottom: 1px solid #E7E7EC !important" color='white' fixed flat clipped-left prominent app>
       <v-toolbar-side-icon @click.stop="drawer = !drawer" style="color: #79589F"></v-toolbar-side-icon>
-      <v-toolbar-title style="color: #534A93; font-size: 22px !important;">Routefusion</v-toolbar-title>
+      <v-toolbar-title style="color: #534A93; font-size: 22px !important;">Powered by Routefusion</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-menu bottom left>
         <v-btn icon slot="activator">
