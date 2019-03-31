@@ -265,12 +265,8 @@ export default {
     this.getUserBeneficiaries().then(beneficiariesArr => {
       this.checkForCurrentBenny(beneficiariesArr);
     });
-    this.getUser()
-      .then(user => {
-        this.user = user.data;
-        this.loading = false;
-      })
-      .catch(err => console.log("getUser error"));
+    this.user = getLocal("user");
+    this.loading = false;
   },
 
   methods: {
@@ -394,11 +390,6 @@ export default {
 
     sendToVerification() {
       window.open("http://onboard.routefusion.co", "_blank");
-    },
-
-    getUser: function() {
-      let userId = this.decodeToken().userId;
-      return axios.get(`${process.env.API_URL}/users/${userId}`, this.setHeaders());
     },
 
     checkForCurrentBenny(beneficiariesArr) {
