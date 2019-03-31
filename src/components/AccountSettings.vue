@@ -59,6 +59,7 @@
 
 <script>
 import * as rf from "../utils/sdk.js";
+import { capitalize } from "../utils/helpers";
 import { getLocal } from "../utils/localStorage.js";
 
 import Footer from "./Footer";
@@ -90,13 +91,13 @@ export default {
 
   created() {
     var user = getLocal("user");
-    if (!user.lastName) {
+    if (!user.last_name) {
       this.formError = true;
       this.errorMessage = "There was an unknown error, please contact support@routefusion.co if the issue persists";
     } else {
       var userObj = {
-        firstName: user.firstName,
-        lastName: user.lastName,
+        firstName: capitalize(user.first_name),
+        lastName: capitalize(user.last_name),
         email: user.email,
         mfaEnabled: user.mfaEnabled
       };
@@ -142,10 +143,6 @@ export default {
       //       }
       //     });
       // }
-    },
-
-    capitalize(str) {
-      return str[0].toUpperCase() + str.substring(1);
     }
   }
 };
