@@ -217,10 +217,10 @@
 </template>
 
 <script>
+import * as rf from "../utils/sdk";
+import { getLocal } from "../utils/localStorage";
 import Spinner from "./Spinner";
-import axios from "axios";
 import numeral from "numeral";
-import * as decode from "jwt-decode";
 import { Decimal } from "decimal.js";
 
 export default {
@@ -261,17 +261,28 @@ export default {
     "spin-baby-spin": Spinner
   },
 
+  created() {
+    this.getUserBeneficiaries().then(beneficiariesArr => {
+      this.checkForCurrentBenny(beneficiariesArr);
+    });
+    this.getUser()
+      .then(user => {
+        this.user = user.data;
+        this.loading = false;
+      })
+      .catch(err => console.log("getUser error"));
+  },
+
   methods: {
     submit: function() {
       this.disableSubmit = true;
       const transferPayload = this.formatTransferData();
-      axios
-        .post(`${process.env.API_URL}/transfers`, transferPayload, this.setHeaders())
-        .then(resp => {
+      rf
+        .createTransfer()
+        .then(res => {
           this.success = true;
         })
         .catch(err => {
-          console.log("Transfer", err);
           this.paymentErrorMessage = err.response.data.message;
           this.paymentError = true;
           setTimeout(() => (this.paymentError = false), 10000);
@@ -342,7 +353,7 @@ export default {
 
     formatTransferData: function() {
       return {
-        user_id: this.decodeToken().userId,
+        user_id: getLocal("user").uuid,
         beneficiary_id: this.payment.beneficiary.id,
         source_amount: this.payment.amount,
         exchange_rate: this.rate,
@@ -354,24 +365,14 @@ export default {
       };
     },
 
-    decodeToken() {
-      return decode(localStorage.token);
-    },
-
-    setHeaders: function() {
-      let token = localStorage.token;
-      return { headers: { token: token } };
-    },
-
     getUserBeneficiaries: function() {
-      let userId = this.decodeToken().userId;
-      return axios
-        .get(`${process.env.API_URL}/users/${userId}/beneficiaries`, this.setHeaders())
+      return rf
+        .getBen()
         .then(resp => {
           let beneficiariesArr = [];
 
-          for (var i = 0; i < resp.data.length; i++) {
-            let beneficiary = resp.data[i];
+          for (var i = 0; i < resp.length; i++) {
+            let beneficiary = resp[i];
 
             if (beneficiary.verified) {
               beneficiariesArr.push({
@@ -384,9 +385,7 @@ export default {
 
           return (this.beneficiaries = beneficiariesArr);
         })
-        .catch(err => {
-          console.log("error", err);
-        });
+        .catch(err => console.log(err));
     },
 
     sendToBeneficiaries() {
@@ -434,18 +433,6 @@ export default {
         this.payment.beneficiaryAmount = numeral(this.payment.amountWithFee * this.rate).format("0[.]00");
       });
     }
-  },
-
-  created() {
-    this.getUserBeneficiaries().then(beneficiariesArr => {
-      this.checkForCurrentBenny(beneficiariesArr);
-    });
-    this.getUser()
-      .then(user => {
-        this.user = user.data;
-        this.loading = false;
-      })
-      .catch(err => console.log("getUser error"));
   }
 };
 </script>
